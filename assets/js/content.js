@@ -1219,3 +1219,16 @@ Mỗi test mô tả hành vi người dùng.</code></pre>
     },
   ],
 };
+
+/* Bổ sung nội dung chuyên sâu theo id mục (assets/js/deep/*.js):
+   advanced (HTML), traps (tình huống khó), quiz (câu khó, nối thêm), widgets (danh sách mô phỏng), keyPoints (nối thêm). */
+window.DEEP_ADD = (map) =>
+  Object.entries(map).forEach(([id, d]) => {
+    const s = window.COURSE.chapters.flatMap((c) => c.sections).find((x) => x.id === id);
+    if (!s) return console.warn("Không tìm thấy mục", id);
+    if (d.advanced) s.advanced = d.advanced;
+    if (d.widgets) s.widgets = d.widgets;
+    if (d.traps) s.traps = (s.traps || []).concat(d.traps);
+    if (d.quiz) s.quiz = (s.quiz || []).concat(d.quiz);
+    if (d.keyPoints) s.keyPoints = (s.keyPoints || []).concat(d.keyPoints);
+  });
