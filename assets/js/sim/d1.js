@@ -70,7 +70,7 @@
       steps: ({ v }) => {
         const s = [];
         s.push({
-          from: "u", to: "b", kind: "req", label: "tin nhắn", title: "Khách gửi tin nhắn", sub: "POST /chat",
+          from: "u", to: "b", kind: "req", label: "tin nhắn", key: true, title: "Khách gửi tin nhắn", sub: "POST /chat",
           desc: "Khách gõ “Tôi muốn hoàn tiền đơn #1234”. Tin nhắn đi tới backend của bạn, không đi thẳng tới Claude. Backend là nơi điều phối mọi thứ.",
           payload: { session_id: "sess_42", text: "Tôi muốn hoàn tiền đơn #1234" },
           fields: [["session_id", "Mã phiên trò chuyện. Backend dùng nó để lấy lại lịch sử và trạng thái của phiên, ví dụ khách đã được xác minh chưa."], ["text", "Nội dung khách gõ. Nó sẽ được thêm vào lịch sử dưới dạng một tin nhắn của người dùng."]],
@@ -84,7 +84,7 @@
           lines: [5, 12],
         });
         s.push({
-          from: "b", to: "c", kind: "req", label: "yêu cầu #1", title: "Gửi yêu cầu đầu tiên tới Claude", sub: "POST /v1/messages",
+          from: "b", to: "c", kind: "req", label: "yêu cầu #1", key: true, title: "Gửi yêu cầu đầu tiên tới Claude", sub: "POST /v1/messages",
           desc: "Đây là nội dung thật được gửi đi qua HTTP. Phần đầu là thông tin xác thực, phần sau là dữ liệu dạng JSON. Mở tab “Dữ liệu được gửi” để xem đầy đủ.",
           payloads: [{ t: "Phần đầu HTTP", d: HTTP }, { t: "Dữ liệu JSON", d: { model: MODEL, max_tokens: 1024, system: "Bạn là agent chăm sóc khách hàng của ShopX. Luôn xác minh khách trước khi làm gì liên quan tới tiền. Trả lời ngắn gọn bằng tiếng Việt.", tools: TOOLS, messages: [{ role: "user", content: "Tôi muốn hoàn tiền đơn #1234" }] }, hl: ["tools", "messages", "system", "max_tokens"] }],
           fields: [
@@ -105,14 +105,14 @@
         });
         if (v === "mt") {
           s.push({
-            from: "c", to: "b", kind: "err", label: "bị cắt", title: "Câu trả lời bị cắt ngang",
+            from: "c", to: "b", kind: "err", label: "bị cắt", key: true, title: "Câu trả lời bị cắt ngang",
             desc: "Lần này Claude viết dài quá giới hạn 1024 token và bị cắt giữa chừng. Trường <code>stop_reason</code> là <code>max_tokens</code>. Điều đó có nghĩa là Claude <b>chưa nói xong</b>, không phải đã làm xong.",
             payload: { id: "msg_01Trunc", type: "message", role: "assistant", content: [{ type: "text", text: "Mình sẽ kiểm tra thông tin đơn hàng và hồ sơ của bạn. Trước tiên mình cần xác minh danh tính, sau đó tra cứu chính sách hoàn tiền hiện hành để…" }], stop_reason: "max_tokens", usage: { input_tokens: 1187, output_tokens: 40 } },
             hl: ["stop_reason"],
             warn: "Nếu chương trình dừng lại mỗi khi câu trả lời có chữ, khách sẽ nhận được câu trả lời cụt lủn này.",
           });
           s.push({
-            from: "b", to: "c", kind: "req", label: "gọi lại", title: "Backend tăng giới hạn và hỏi lại", sub: "POST /v1/messages",
+            from: "b", to: "c", kind: "req", label: "gọi lại", key: true, title: "Backend tăng giới hạn và hỏi lại", sub: "POST /v1/messages",
             desc: "Backend nhận ra câu trả lời bị cắt, nên không lưu nó vào lịch sử. Thay vào đó, backend tăng giới hạn độ dài lên gấp bốn rồi gửi lại đúng cuộc trò chuyện cũ.",
             backend: ["Không thêm câu trả lời bị cắt vào lịch sử.", "Tăng <code>max_tokens</code> từ 1024 lên 4096.", "Ghi nhật ký để sau này chỉnh lại giới hạn cho phù hợp, vì giới hạn quá thấp là lỗi cấu hình."],
             payload: { model: MODEL, max_tokens: 4096, system: "(như yêu cầu #1)", tools: "(4 công cụ như yêu cầu #1)", messages: [{ role: "user", content: "Tôi muốn hoàn tiền đơn #1234" }] }, hl: ["max_tokens"],
@@ -120,7 +120,7 @@
           });
         }
         s.push({
-          from: "c", to: "b", kind: "res", label: "xin chạy công cụ", title: "Claude trả lời: vừa có chữ, vừa xin chạy công cụ", sub: "200 OK",
+          from: "c", to: "b", kind: "res", label: "xin chạy công cụ", key: true, title: "Claude trả lời: vừa có chữ, vừa xin chạy công cụ", sub: "200 OK",
           desc: "Câu trả lời gồm hai khối. Khối đầu là một câu nói với khách. Khối sau là <code>tool_use</code>: yêu cầu chạy công cụ <code>get_customer</code> với mã đơn 1234. Trường <code>stop_reason</code> là <code>tool_use</code>, nghĩa là Claude đang chờ kết quả công cụ để làm tiếp.",
           payload: { id: "msg_01XFDUD", type: "message", role: "assistant", model: MODEL, content: [{ type: "text", text: "Mình kiểm tra thông tin của bạn trước nhé." }, { type: "tool_use", id: "toolu_01A", name: "get_customer", input: { order_id: "1234" } }], stop_reason: "tool_use", stop_sequence: null, usage: { input_tokens: 1187, output_tokens: 64 } },
           hl: ["stop_reason", "tool_use", "id", "input"],
@@ -141,7 +141,7 @@
           backend: ["Lưu nguyên văn câu trả lời của Claude vào lịch sử, kể cả khối tool_use.", "Tìm hàm xử lý tương ứng với tên công cụ. Nếu không có công cụ nào tên như vậy, trả về lỗi thay vì làm sập chương trình.", "Kiểm tra tham số: mã đơn có đúng định dạng không, phiên này có được phép tra cứu không."],
           lines: [15, 26], push: [{ r: "assistant", t: "Câu nói + yêu cầu chạy <b>get_customer</b> (mã toolu_01A)" }],
         });
-        s.push({ from: "b", to: "t", kind: "req", label: "tra khách", title: "Backend gọi hệ thống khách hàng thật", sub: "GET /crm/customers?order=1234", desc: "Đây mới là lúc công cụ thực sự chạy. Backend gọi hệ thống nội bộ bằng địa chỉ và quyền truy cập của riêng nó. Claude không hề biết những thông tin này.", payload: { order_id: "1234" }, lines: [26, 26] });
+        s.push({ from: "b", to: "t", kind: "req", label: "tra khách", key: true, title: "Backend gọi hệ thống khách hàng thật", sub: "GET /crm/customers?order=1234", desc: "Đây mới là lúc công cụ thực sự chạy. Backend gọi hệ thống nội bộ bằng địa chỉ và quyền truy cập của riêng nó. Claude không hề biết những thông tin này.", payload: { order_id: "1234" }, lines: [26, 26] });
         s.push({ from: "t", to: "b", kind: "res", label: "hồ sơ khách", title: "Hệ thống khách hàng trả về hồ sơ", desc: "Kết quả thô thường có nhiều trường không cần thiết như ghi chú nội bộ hay thông tin tiếp thị. Nên lọc bớt trước khi đưa cho Claude, để tiết kiệm chỗ và tránh gây nhiễu.", payload: { customer_id: "C-88", name: "Trần Lan", tier: "gold", email_verified: true, internal_notes: "...", marketing_flags: ["..."], created_at: 1704067200 } });
         s.push({
           from: "b", to: "b", kind: "internal", title: "Đóng gói kết quả và thêm vào lịch sử",
@@ -151,7 +151,7 @@
           lines: [27, 33], push: [{ r: "tool", t: "Kết quả cho toolu_01A: C-88, Trần Lan, hạng gold" }],
         });
         s.push({
-          from: "b", to: "c", kind: "req", label: "yêu cầu #2", title: "Gửi lại toàn bộ cuộc trò chuyện", sub: "POST /v1/messages",
+          from: "b", to: "c", kind: "req", label: "yêu cầu #2", key: true, title: "Gửi lại toàn bộ cuộc trò chuyện", sub: "POST /v1/messages",
           desc: "Lần gọi thứ hai không chỉ gửi kết quả mới. Backend gửi lại tất cả: tin nhắn của khách, câu trả lời trước của Claude và kết quả công cụ. Claude cần thấy cả ba để biết bước tiếp theo.",
           payload: { model: MODEL, max_tokens: v === "mt" ? 4096 : 1024, system: "(như trước)", tools: "(4 công cụ)", messages: [{ role: "user", content: "Tôi muốn hoàn tiền đơn #1234" }, { role: "assistant", content: [{ type: "text", text: "Mình kiểm tra thông tin của bạn trước nhé." }, { type: "tool_use", id: "toolu_01A", name: "get_customer", input: { order_id: "1234" } }] }, { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_01A", content: "{\"customer_id\":\"C-88\",\"name\":\"Trần Lan\",\"tier\":\"gold\"}" }] }] },
           hl: ["tool_result", "tool_use_id", "messages"],
@@ -169,7 +169,7 @@
         if (v === "err") {
           s.push({ from: "t", to: "b", kind: "err", label: "1 lỗi", title: "Tra đơn thành công, nhưng dịch vụ chính sách bị quá tải", desc: "Dịch vụ chính sách không phản hồi sau 5 giây. Đây là lỗi tạm thời: thử lại sau một chút có thể sẽ được.", payloads: [{ t: "lookup_order", d: { amount: 89, status: "delivered", days_since_delivery: 12 } }, { t: "get_refund_policy", d: "HTTP 503 Service Unavailable (quá 5 giây)" }] });
           s.push({
-            from: "b", to: "c", kind: "req", label: "yêu cầu #3", title: "Báo lỗi cho Claude một cách rõ ràng",
+            from: "b", to: "c", kind: "req", label: "yêu cầu #3", key: true, title: "Báo lỗi cho Claude một cách rõ ràng",
             desc: "Backend vẫn gửi kết quả cho cả hai yêu cầu. Kết quả của công cụ bị lỗi được đánh dấu <code>is_error: true</code>, kèm mô tả: đây là lỗi tạm thời và có thể thử lại.",
             payload: { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_02B", content: "{\"amount\":89,\"status\":\"delivered\",\"days_since_delivery\":12}" }, { type: "tool_result", tool_use_id: "toolu_02C", is_error: true, content: "{\"errorCategory\":\"transient\",\"isRetryable\":true,\"message\":\"Dịch vụ chính sách không phản hồi sau 5 giây\"}" }] },
             hl: ["is_error", "isRetryable", "errorCategory"],
@@ -192,7 +192,7 @@
         }
         s.push({ from: "c", to: "b", kind: "res", label: "xin hoàn tiền", title: "Claude xin hoàn tiền", desc: "Khách đã được xác minh, đơn còn trong hạn và số tiền nằm dưới hạn mức. Claude xin chạy <code>process_refund</code> với số tiền $89.", payload: { content: [{ type: "tool_use", id: "toolu_04D", name: "process_refund", input: { order_id: "1234", amount: 89 } }], stop_reason: "tool_use" }, hl: ["process_refund", "amount"], push: [{ r: "assistant", t: "Xin chạy <b>process_refund</b> với $89" }] });
         s.push({
-          from: "b", to: "t", kind: "req", label: "hoàn tiền", title: "Backend tự kiểm tra lần cuối rồi mới hoàn tiền", sub: "POST /billing/refunds",
+          from: "b", to: "t", kind: "req", label: "hoàn tiền", key: true, title: "Backend tự kiểm tra lần cuối rồi mới hoàn tiền", sub: "POST /billing/refunds",
           desc: "Backend không làm theo Claude một cách mù quáng. Trước khi gọi hệ thống thanh toán, nó tự kiểm tra lại các điều kiện bằng code. Nếu một điều kiện không đạt, lệnh bị chặn và Claude nhận được thông báo lỗi.",
           backend: ["Khách đã được xác minh chưa? Có, vì chính backend đã ghi nhận C-88 ở bước trước, không dựa vào lời Claude.", "Số tiền $89 có dưới hạn mức $500 không? Có.", "Đơn có còn trong hạn 30 ngày không? Còn, mới 12 ngày.", "Gọi hệ thống thanh toán kèm một khóa chống trùng, để nếu phải gửi lại thì khách cũng không bị hoàn tiền hai lần."],
           snippet: "def run_tool(sid, name, inp):\n    if name == \"process_refund\":\n        if not session[sid].verified_customer_id:\n            return Err(\"permission\", \"Chưa xác minh khách\")\n        if inp[\"amount\"] > POLICY.auto_limit:\n            return Err(\"business\", \"Vượt hạn mức, cần người duyệt\")\n    return HANDLERS[name](**inp)",
@@ -201,13 +201,13 @@
         s.push({ from: "t", to: "b", kind: "res", label: "đã hoàn", title: "Hệ thống thanh toán xác nhận", desc: "Hoàn tiền thành công với mã R-551. Tiền sẽ về tài khoản của khách trong 3 đến 5 ngày.", payload: { refund_id: "R-551", status: "ok", eta_days: "3-5" } });
         s.push({ from: "b", to: "c", kind: "req", label: "yêu cầu cuối", title: "Gửi kết quả hoàn tiền cho Claude", desc: "Backend lại gửi cả cuộc trò chuyện, lần này có thêm kết quả hoàn tiền.", payload: { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_04D", content: "{\"refund_id\":\"R-551\",\"status\":\"ok\",\"eta_days\":\"3-5\"}" }] }, push: [{ r: "tool", t: "toolu_04D: hoàn tiền thành công, mã R-551" }] });
         s.push({
-          from: "c", to: "b", kind: "ok", label: "xong", title: "Claude trả lời: stop_reason = \"end_turn\"",
+          from: "c", to: "b", kind: "ok", label: "xong", key: true, title: "Claude trả lời: stop_reason = \"end_turn\"",
           desc: "Lần này câu trả lời chỉ có chữ, và <code>stop_reason</code> là <code>end_turn</code>. Đây là tín hiệu Claude đã làm xong. Backend thoát khỏi vòng lặp.",
           payload: { content: [{ type: "text", text: "Đã hoàn $89 cho đơn #1234 (mã R-551). Tiền sẽ về thẻ của bạn trong 3 đến 5 ngày làm việc." }], stop_reason: "end_turn", usage: { input_tokens: 1702, output_tokens: 41 } },
           hl: ["end_turn"],
           lines: [17, 19], push: [{ r: "assistant", t: "“Đã hoàn $89… mã R-551” <b>(end_turn)</b>" }],
         });
-        s.push({ from: "b", to: "u", kind: "ok", label: "trả lời", title: "Backend gửi câu trả lời cho khách", desc: "Khách chỉ thấy câu trả lời bằng chữ. Những khối yêu cầu và kết quả công cụ là chuyện nội bộ giữa backend và Claude.", payload: { reply: "Đã hoàn $89 cho đơn #1234 (mã R-551). Tiền sẽ về thẻ của bạn trong 3 đến 5 ngày làm việc." }, backend: ["Lưu lịch sử để lần sau khách nhắn tiếp thì vẫn nối được.", "Chỉ gửi phần chữ cho khách.", "Ghi nhật ký kiểm toán: ai được hoàn, bao nhiêu, mã giao dịch nào."], lines: [18, 19] });
+        s.push({ from: "b", to: "u", kind: "ok", label: "trả lời", key: true, title: "Backend gửi câu trả lời cho khách", desc: "Khách chỉ thấy câu trả lời bằng chữ. Những khối yêu cầu và kết quả công cụ là chuyện nội bộ giữa backend và Claude.", payload: { reply: "Đã hoàn $89 cho đơn #1234 (mã R-551). Tiền sẽ về thẻ của bạn trong 3 đến 5 ngày làm việc." }, backend: ["Lưu lịch sử để lần sau khách nhắn tiếp thì vẫn nối được.", "Chỉ gửi phần chữ cho khách.", "Ghi nhật ký kiểm toán: ai được hoàn, bao nhiêu, mã giao dịch nào."], lines: [18, 19] });
         return s;
       },
     }),
@@ -240,11 +240,11 @@
           fields: [["allowedTools: [\"Task\"]", "Coordinator được phép dùng công cụ Task. Thiếu dòng này thì không giao được việc cho ai."], ["agents.*.description", "Mô tả từng agent con. Coordinator đọc mô tả này để quyết định giao việc cho ai."], ["agents.*.tools", "Công cụ của từng agent con. Agent tổng hợp không có công cụ tìm kiếm, nên không thể tự đi tìm thêm."], ["agents.*.model", "Có thể dùng model nhỏ, rẻ hơn cho agent con làm việc đơn giản."]],
           push: [{ r: "sys", t: "Hướng dẫn coordinator + mô tả công cụ Task (search, synth)" }, { r: "user", t: "Đề tài: tác động của AI tới các ngành sáng tạo" }],
         });
-        s.push({ from: "c", to: "c", kind: "internal", title: "Coordinator chia đề tài thành các phần", desc: "Coordinator chia thành bốn khía cạnh: nghệ thuật thị giác, âm nhạc, văn học và điện ảnh. Đây là bước dễ sai nhất: nếu chia thiếu khía cạnh nào, báo cáo cuối sẽ thiếu phần đó, dù các agent con làm tốt tới đâu.", note: "Kiểm tra xem danh sách khía cạnh đã đủ chưa ở ngay bước này rẻ hơn nhiều so với phát hiện thiếu ở báo cáo cuối." });
+        s.push({ from: "c", to: "c", kind: "internal", key: true, title: "Coordinator chia đề tài thành các phần", desc: "Coordinator chia thành bốn khía cạnh: nghệ thuật thị giác, âm nhạc, văn học và điện ảnh. Đây là bước dễ sai nhất: nếu chia thiếu khía cạnh nào, báo cáo cuối sẽ thiếu phần đó, dù các agent con làm tốt tới đâu.", note: "Kiểm tra xem danh sách khía cạnh đã đủ chưa ở ngay bước này rẻ hơn nhiều so với phát hiện thiếu ở báo cáo cuối." });
         const task = (topic, id) => ({ type: "tool_use", id, name: "Task", input: { description: "Tìm: AI và " + topic, subagent_type: "search", prompt: full ? `Mục tiêu: thu thập bằng chứng về tác động của AI tới ${topic} (2023–2026). Cần bao quát: việc làm, bản quyền, các công cụ phổ biến. Trả về JSON {findings:[{claim, quote, url, date}]}, tối đa 8 phát hiện, ưu tiên nguồn gốc.` : "Hãy làm phần việc của bạn." } });
         if (par) {
           s.push({
-            from: "c", to: "s", kind: "res", label: "4 lệnh Task", title: "Coordinator giao 4 việc trong cùng một lượt",
+            from: "c", to: "s", kind: "res", label: "4 lệnh Task", key: true, title: "Coordinator giao 4 việc trong cùng một lượt",
             desc: "Trong một câu trả lời, coordinator đưa ra bốn yêu cầu dùng công cụ Task, mỗi yêu cầu cho một khía cạnh. Vì nằm chung một lượt, cả bốn agent con sẽ chạy cùng lúc.",
             payload: { content: [task("nghệ thuật thị giác", "toolu_T1"), task("âm nhạc", "toolu_T2"), task("văn học", "toolu_T3"), task("điện ảnh", "toolu_T4")], stop_reason: "tool_use" },
             hl: ["Task", "subagent_type", "prompt"],
@@ -260,14 +260,14 @@
           backend: ["Hướng dẫn chung lấy từ mô tả agent search, không phải từ coordinator.", "Công cụ chỉ có tìm kiếm web và đọc trang.", "Cuộc trò chuyện chỉ có đúng một tin nhắn: nội dung phiếu giao việc."],
         });
         s.push({
-          from: "s", to: "r", kind: "req", label: "phiếu giao việc", title: "Đây là tất cả những gì agent con nhìn thấy",
+          from: "s", to: "r", kind: "req", label: "phiếu giao việc", key: true, title: "Đây là tất cả những gì agent con nhìn thấy",
           desc: full ? "Phiếu ghi rõ mục tiêu, phạm vi, mẫu kết quả và giới hạn. Agent con có thể làm việc ngay, không cần đoán." : "Phiếu chỉ có một câu “Hãy làm phần việc của bạn”. Agent con không biết đề tài là gì, phạm vi tới đâu, hay phải trả kết quả theo mẫu nào.",
           payload: { system: "Bạn chuyên tìm kiếm. Trả về JSON {findings:[{claim, quote, url, date}]}.", tools: ["WebSearch", "WebFetch"], messages: [{ role: "user", content: task("âm nhạc", "x").input.prompt }] },
           hl: ["messages"],
           warn: full ? null : "Với phiếu giao việc như thế này, kết quả sẽ lan man hoặc sai khía cạnh.",
         });
         s.push({ from: "r", to: "r", kind: "internal", title: "Agent con tự chạy vòng lặp của riêng nó", desc: "Agent tìm kiếm tự tìm, đọc năm trang, rồi chọn lọc. Quá trình này tạo ra khoảng 30.000 token dữ liệu trung gian, nhưng tất cả chỉ nằm trong ngữ cảnh của agent con. Ngữ cảnh của coordinator không bị đầy thêm." });
-        s.push({ from: "r", to: "s", kind: "res", label: "kết quả", title: "Agent con trả kết quả cuối, kèm thông tin nguồn", desc: "Mỗi phát hiện đều có đường dẫn và ngày, để bước tổng hợp sau này trích dẫn được.", payload: { findings: [{ claim: "Doanh thu nhạc tạo bởi AI tăng mạnh trên các nền tảng nghe nhạc", quote: "...", url: "https://example.org/music-report-2025", date: "2025-09" }, { claim: "Tranh chấp bản quyền giọng hát do AI tạo ra", quote: "...", url: "https://example.org/voice-case", date: "2026-02" }] }, hl: ["url", "date"] });
+        s.push({ from: "r", to: "s", kind: "res", label: "kết quả", key: true, title: "Agent con trả kết quả cuối, kèm thông tin nguồn", desc: "Mỗi phát hiện đều có đường dẫn và ngày, để bước tổng hợp sau này trích dẫn được.", payload: { findings: [{ claim: "Doanh thu nhạc tạo bởi AI tăng mạnh trên các nền tảng nghe nhạc", quote: "...", url: "https://example.org/music-report-2025", date: "2025-09" }, { claim: "Tranh chấp bản quyền giọng hát do AI tạo ra", quote: "...", url: "https://example.org/voice-case", date: "2026-02" }] }, hl: ["url", "date"] });
         s.push({
           from: "s", to: "c", kind: "res", label: "4 kết quả", title: "Coordinator nhận về bốn kết quả cuối",
           desc: "Agent SDK gửi kết quả của từng agent con về cho coordinator, giống như kết quả của một công cụ bình thường. Coordinator chỉ nhận khoảng 2.000 token kết quả gọn, thay vì khoảng 120.000 token dữ liệu trung gian của bốn agent con.",
@@ -275,7 +275,7 @@
           push: [{ r: "tool", t: "Kết quả T1 tới T4: các phát hiện kèm đường dẫn và ngày" }],
         });
         s.push({
-          from: "c", to: "s", kind: "res", label: "giao tổng hợp", title: "Coordinator giao việc tổng hợp, kèm toàn bộ dữ liệu",
+          from: "c", to: "s", kind: "res", label: "giao tổng hợp", key: true, title: "Coordinator giao việc tổng hợp, kèm toàn bộ dữ liệu",
           desc: "Agent tổng hợp không thấy kết quả của agent tìm kiếm. Vì vậy coordinator phải dán thẳng các phát hiện vào phiếu giao việc, kèm yêu cầu rõ ràng về cách trình bày.",
           payload: { content: [{ type: "tool_use", id: "toolu_S1", name: "Task", input: { subagent_type: "synth", description: "Tổng hợp báo cáo", prompt: "Mục tiêu: báo cáo tác động của AI tới 4 ngành sáng tạo.\nDữ liệu (giữ nguyên đường dẫn và ngày khi trích dẫn):\n<findings area=\"âm nhạc\">[...]</findings>\n<findings area=\"văn học\">[...]</findings>...\nYêu cầu: mỗi nhận định có nguồn; nêu rõ chỗ mâu thuẫn; ghi chú khía cạnh nào thiếu dữ liệu." } }], stop_reason: "tool_use" },
           hl: ["prompt"], warn: "Nếu phiếu chỉ ghi “tổng hợp các phát hiện ở trên”, agent tổng hợp sẽ không có dữ liệu nào, vì nó không thấy “ở trên” là gì.",
@@ -284,7 +284,7 @@
         s.push({ from: "s", to: "y", kind: "req", label: "phiếu giao việc", title: "Agent tổng hợp bắt đầu với ngữ cảnh mới", desc: "Agent tổng hợp không có công cụ tìm kiếm, nên nó chỉ có thể làm việc với dữ liệu được giao. Nhờ đó nó làm đúng vai trò của mình." });
         s.push({ from: "y", to: "s", kind: "res", label: "báo cáo", title: "Agent tổng hợp trả về báo cáo", desc: "Báo cáo có trích dẫn cho từng nhận định, và một mục ghi chú cho biết khía cạnh nào còn thiếu dữ liệu.", payload: { report_md: "## Âm nhạc\n- ... [nguồn: example.org/music-report-2025, 2025-09]\n## Ghi chú độ bao phủ\n- Điện ảnh: mới có 2 nguồn, cần bổ sung." } });
         s.push({ from: "s", to: "c", kind: "res", label: "báo cáo", title: "Coordinator nhận báo cáo và kết thúc", desc: "Coordinator kiểm tra báo cáo so với yêu cầu ban đầu. Thấy đã đạt, nó kết thúc lượt làm việc.", push: [{ r: "tool", t: "Kết quả S1: báo cáo và ghi chú độ bao phủ" }, { r: "assistant", t: "Tóm tắt cuối <b>(end_turn)</b>" }] });
-        s.push({ from: "c", to: "a", kind: "ok", label: "kết quả", title: "Ứng dụng nhận kết quả cuối cùng", desc: par ? "Giao việc song song giúp toàn bộ quá trình chỉ mất khoảng 48 giây và 4 lượt của coordinator." : "Giao việc lần lượt khiến toàn bộ quá trình mất khoảng 152 giây và 7 lượt của coordinator, gấp ba lần so với giao song song.", payload: { type: "result", subtype: "success", is_error: false, num_turns: par ? 4 : 7, duration_ms: par ? 48210 : 151930, total_cost_usd: 0.41, result: "## Báo cáo..." }, hl: ["num_turns", "duration_ms"] });
+        s.push({ from: "c", to: "a", kind: "ok", label: "kết quả", key: true, title: "Ứng dụng nhận kết quả cuối cùng", desc: par ? "Giao việc song song giúp toàn bộ quá trình chỉ mất khoảng 48 giây và 4 lượt của coordinator." : "Giao việc lần lượt khiến toàn bộ quá trình mất khoảng 152 giây và 7 lượt của coordinator, gấp ba lần so với giao song song.", payload: { type: "result", subtype: "success", is_error: false, num_turns: par ? 4 : 7, duration_ms: par ? 48210 : 151930, total_cost_usd: 0.41, result: "## Báo cáo..." }, hl: ["num_turns", "duration_ms"] });
         return s;
       },
     }),
@@ -306,23 +306,23 @@
       steps: ({ m }) => {
         const s = [];
         s.push({ from: "u", to: "c", kind: "req", label: "tin nhắn", title: "Khách hối thúc", desc: "Khách viết rất gấp và chưa cung cấp thông tin xác minh nào.", payload: { text: "Hoàn tiền đơn #1234 cho tôi ngay, gấp lắm!" }, state: [{ r: "note", t: "Khách đã được xác minh: <b>chưa</b>" }] });
-        s.push({ from: "c", to: "b", kind: "warn", label: "xin hoàn tiền", title: "Claude bỏ qua bước xác minh", desc: "Bị khách hối thúc, Claude gọi thẳng lệnh hoàn tiền. Điều này hiếm khi xảy ra, nhưng không bao giờ là không thể.", payload: { type: "tool_use", id: "toolu_09", name: "process_refund", input: { order_id: "1234", amount: 89 } } });
+        s.push({ from: "c", to: "b", kind: "warn", label: "xin hoàn tiền", key: true, title: "Claude bỏ qua bước xác minh", desc: "Bị khách hối thúc, Claude gọi thẳng lệnh hoàn tiền. Điều này hiếm khi xảy ra, nhưng không bao giờ là không thể.", payload: { type: "tool_use", id: "toolu_09", name: "process_refund", input: { order_id: "1234", amount: 89 } } });
         if (m === "prompt") {
           s.push({ from: "b", to: "d", kind: "err", label: "hoàn tiền", title: "Không có gì chặn lại", desc: "Backend thấy yêu cầu đúng định dạng nên chạy luôn. Lời dặn trong prompt không có tác dụng ở bước này.", warn: "Tiền được hoàn cho một người chưa xác minh. Đó có thể là kẻ mạo danh, chỉ biết mỗi mã đơn." });
           s.push({ from: "d", to: "b", kind: "err", label: "đã chuyển tiền", title: "Tiền đã đi, không lấy lại được", desc: "Giao dịch đã hoàn tất, và kiểm toán sẽ phát hiện một lần hoàn tiền không qua bước xác minh.", payload: { refund_id: "R-777", status: "ok" }, push: [{ r: "err", t: "Kiểm toán: R-777 hoàn tiền mà không xác minh" }] });
           s.push({ from: "b", to: "c", kind: "err", label: "kết quả", title: "Bài học", desc: "Dặn trong prompt giúp Claude làm đúng trong <b>phần lớn</b> trường hợp. Với hành động không thể đảo ngược như chuyển tiền hay xóa dữ liệu, “phần lớn” là chưa đủ; cần một bước kiểm tra bằng code." });
           return s;
         }
-        s.push({ from: "b", to: "b", kind: "internal", title: "Backend kiểm tra trạng thái của phiên", desc: "Trước khi chạy lệnh hoàn tiền, backend xem trong bộ nhớ của phiên đã có ghi nhận “khách đã được xác minh” hay chưa. Ghi nhận này do backend tự ghi sau khi tra cứu, không phải do Claude khai báo.", snippet: "if session.verified_customer_id is None:\n    return tool_error(\"precondition_failed\",\n        \"Chưa xác minh khách. Hỏi email đặt hàng rồi gọi get_customer.\")" });
-        s.push({ from: "b", to: "c", kind: "err", label: "bị chặn", title: "Lệnh bị chặn, kèm hướng dẫn cần làm gì", desc: "Backend không gọi hệ thống thanh toán. Nó trả về cho Claude một thông báo lỗi nói rõ vì sao bị chặn và bước tiếp theo cần làm.", payload: { type: "tool_result", tool_use_id: "toolu_09", is_error: true, content: "{\"error\":\"precondition_failed\",\"message\":\"Chưa xác minh khách. Hỏi email đặt hàng rồi gọi get_customer.\"}" }, hl: ["is_error", "message"], note: "Vì thông báo lỗi nói rõ cần làm gì, Claude tự sửa hướng đi, thay vì gọi lại lệnh hoàn tiền một cách vô ích." });
+        s.push({ from: "b", to: "b", kind: "internal", key: true, title: "Backend kiểm tra trạng thái của phiên", desc: "Trước khi chạy lệnh hoàn tiền, backend xem trong bộ nhớ của phiên đã có ghi nhận “khách đã được xác minh” hay chưa. Ghi nhận này do backend tự ghi sau khi tra cứu, không phải do Claude khai báo.", snippet: "if session.verified_customer_id is None:\n    return tool_error(\"precondition_failed\",\n        \"Chưa xác minh khách. Hỏi email đặt hàng rồi gọi get_customer.\")" });
+        s.push({ from: "b", to: "c", kind: "err", label: "bị chặn", key: true, title: "Lệnh bị chặn, kèm hướng dẫn cần làm gì", desc: "Backend không gọi hệ thống thanh toán. Nó trả về cho Claude một thông báo lỗi nói rõ vì sao bị chặn và bước tiếp theo cần làm.", payload: { type: "tool_result", tool_use_id: "toolu_09", is_error: true, content: "{\"error\":\"precondition_failed\",\"message\":\"Chưa xác minh khách. Hỏi email đặt hàng rồi gọi get_customer.\"}" }, hl: ["is_error", "message"], note: "Vì thông báo lỗi nói rõ cần làm gì, Claude tự sửa hướng đi, thay vì gọi lại lệnh hoàn tiền một cách vô ích." });
         s.push({ from: "c", to: "u", kind: "res", label: "hỏi email", title: "Claude chuyển sang xác minh", desc: "Claude hỏi khách email đã dùng khi đặt hàng.", payload: { text: "Để bảo vệ tài khoản của bạn, bạn cho mình email đã dùng khi đặt đơn #1234 nhé." } });
         s.push({ from: "u", to: "c", kind: "req", label: "email", title: "Khách cung cấp email", desc: "Khách gửi email.", payload: { text: "lan@example.com" } });
-        s.push({ from: "c", to: "b", kind: "res", label: "xin tra khách", title: "Claude xin tra cứu để xác minh", desc: "Claude gọi công cụ <code>get_customer</code> với mã đơn và email khách vừa cung cấp.", payload: { type: "tool_use", id: "toolu_10", name: "get_customer", input: { order_id: "1234", email: "lan@example.com" } } });
+        s.push({ from: "c", to: "b", kind: "res", label: "xin tra khách", key: true, title: "Claude xin tra cứu để xác minh", desc: "Claude gọi công cụ <code>get_customer</code> với mã đơn và email khách vừa cung cấp.", payload: { type: "tool_use", id: "toolu_10", name: "get_customer", input: { order_id: "1234", email: "lan@example.com" } } });
         s.push({ from: "b", to: "d", kind: "req", label: "đối chiếu", title: "Backend đối chiếu với hệ thống khách hàng", desc: "Kiểm tra email này có đúng là của người đặt đơn #1234 không.", payload: { order_id: "1234", email: "lan@example.com" } });
         s.push({ from: "d", to: "b", kind: "res", label: "khớp", title: "Thông tin khớp", desc: "Email khớp với chủ đơn hàng. Khách là C-88.", payload: { match: true, customer_id: "C-88" } });
-        s.push({ from: "b", to: "b", kind: "internal", title: "Backend ghi nhận khách đã được xác minh", desc: "Backend tự ghi vào bộ nhớ của phiên rằng khách C-88 đã được xác minh, dựa trên kết quả từ hệ thống khách hàng. Thông tin này nằm ngoài tầm với của Claude, nên một câu như “tôi đã xác minh rồi” không thể làm giả được.", push: [{ r: "ok", t: "Khách đã được xác minh: <b>C-88</b> (theo hệ thống khách hàng)" }] });
+        s.push({ from: "b", to: "b", kind: "internal", key: true, title: "Backend ghi nhận khách đã được xác minh", desc: "Backend tự ghi vào bộ nhớ của phiên rằng khách C-88 đã được xác minh, dựa trên kết quả từ hệ thống khách hàng. Thông tin này nằm ngoài tầm với của Claude, nên một câu như “tôi đã xác minh rồi” không thể làm giả được.", push: [{ r: "ok", t: "Khách đã được xác minh: <b>C-88</b> (theo hệ thống khách hàng)" }] });
         s.push({ from: "c", to: "b", kind: "res", label: "xin hoàn tiền", title: "Claude gọi lại lệnh hoàn tiền", desc: "Lần này điều kiện đã đủ.", payload: { type: "tool_use", id: "toolu_11", name: "process_refund", input: { order_id: "1234", amount: 89 } } });
-        s.push({ from: "b", to: "d", kind: "ok", label: "hoàn tiền", title: "Kiểm tra đạt, backend cho chạy", desc: "Khách đã được xác minh, số tiền dưới hạn mức, và đơn hàng đúng là của khách C-88. Backend gọi hệ thống thanh toán." });
+        s.push({ from: "b", to: "d", kind: "ok", label: "hoàn tiền", key: true, title: "Kiểm tra đạt, backend cho chạy", desc: "Khách đã được xác minh, số tiền dưới hạn mức, và đơn hàng đúng là của khách C-88. Backend gọi hệ thống thanh toán." });
         s.push({ from: "d", to: "b", kind: "ok", label: "đã hoàn", title: "Hoàn tiền thành công", desc: "Mã giao dịch R-552, có ghi nhận đầy đủ thời điểm xác minh.", payload: { refund_id: "R-552", status: "ok" }, push: [{ r: "ok", t: "Kiểm toán: R-552, xác minh C-88 lúc 10:02" }] });
         s.push({ from: "c", to: "u", kind: "ok", label: "trả lời", title: "Claude báo cho khách", desc: "Khách nhận được câu trả lời, và quy trình xác minh đã được tuân thủ.", payload: { text: "Đã xác minh và hoàn $89 cho đơn #1234 (mã R-552)." } });
         return s;

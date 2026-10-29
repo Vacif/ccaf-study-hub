@@ -91,10 +91,10 @@
     render(el) {
       const S = window.STUDY;
       const weeks = [
-        ["Tuần 1", "Chương 1 — Agentic Architecture (27%): vòng lặp agent, coordinator–subagent, hook. Tự viết một agent loop nhỏ."],
-        ["Tuần 2", "Chương 3 — Claude Code (20%) + Chương 2 — Tool & MCP (18%): CLAUDE.md, rules, .mcp.json, lỗi có cấu trúc."],
-        ["Tuần 3", "Chương 4 — Prompt & Structured Output (20%): few-shot, JSON schema, Batch API, review nhiều lượt."],
-        ["Tuần 4", "Chương 5 — Context & Reliability (15%) + 2–3 đề thi thử, ôn lại câu sai và flashcard."],
+        ["Tuần 1", "Mục 0-0 Kiến thức nền và bài thực hành chương 0 (gọi API lần đầu). Sau đó học chương 1, Kiến trúc agent (27%): vòng lặp agent, coordinator và subagent, hook. Làm bài thực hành chương 1."],
+        ["Tuần 2", "Chương 3, Claude Code (20%) và chương 2, Công cụ & MCP (18%): CLAUDE.md, rule, .mcp.json, lỗi có cấu trúc. Làm bài thực hành chương 2 hoặc 3."],
+        ["Tuần 3", "Chương 4, Prompt & đầu ra có cấu trúc (20%): tiêu chí rõ ràng, few-shot, JSON schema, Batch API, review nhiều lượt. Làm bài thực hành chương 4."],
+        ["Tuần 4", "Chương 5, Ngữ cảnh & độ tin cậy (15%). Làm 2–3 đề thi thử 60 câu, ôn lại câu sai và flashcard chưa nhớ."],
       ];
       const draw = () => {
         el.innerHTML = weeks.map(([w, t], k) => `<label class="toggle" style="display:flex;align-items:flex-start;margin:8px 0"><input type="checkbox" data-k="${k}" ${S.state.plan[k] ? "checked" : ""}><span><b>${w}:</b> ${esc(t)}</span></label>`).join("") +

@@ -44,14 +44,29 @@
      spec = { intro, start, actors:[{id,icon,name,sub}], steps: [] | (opts)=>[], controls:[...], stateTitle, code:{title, src} }
      step = { from, to, kind, label, title, sub, desc, note, warn,
               payload | payloads:[{t,d,hl}], payloadTitle, hl, fields:[[k,v]], backend:[html], snippet, lines:[a,b],
-              push:[{r,t}], state:[{r,t}] } */
+              push:[{r,t}], state:[{r,t}], key }
+     Bước có key: true được giữ lại ở chế độ "Tóm tắt"; trace không có bước key thì chỉ có chế độ đầy đủ. */
+  let brief = true;
+  try { brief = localStorage.getItem("ccaf-sim-mode") !== "full"; } catch (e) {}
   function trace(spec) {
     return (el) => {
       const A = spec.actors;
       const opts = {};
       (spec.controls || []).forEach((c) => (opts[c.id] = c.value));
-      let steps = [], n = 0, timer = null, tab = null, picked = null, speed = 1;
-      const getSteps = () => (typeof spec.steps === "function" ? spec.steps(opts) : spec.steps);
+      let all = [], steps = [], n = 0, timer = null, tab = null, picked = null, speed = 1;
+      const getSteps = () => {
+        all = typeof spec.steps === "function" ? spec.steps(opts) : spec.steps;
+        const keys = all.filter((s) => s.key);
+        const hasBrief = keys.length > 0 && keys.length < all.length;
+        const mode = el.querySelector(".tr-mode");
+        if (mode) {
+          mode.style.display = hasBrief ? "" : "none";
+          mode.querySelector('[data-m="brief"]').innerHTML = `Tóm tắt <small>${keys.length} bước chính</small>`;
+          mode.querySelector('[data-m="full"]').innerHTML = `Đầy đủ <small>${all.length} bước</small>`;
+          mode.querySelectorAll("[data-m]").forEach((b) => b.classList.toggle("on", (b.dataset.m === "brief") === brief));
+        }
+        return hasBrief && brief ? keys : all;
+      };
       const actor = (id) => A.find((x) => x.id === id) || { icon: "", name: id };
 
       const ctrlHTML = (spec.controls || [])
@@ -64,6 +79,7 @@
       el.innerHTML = `<div class="tr">
         ${spec.intro ? `<p class="tr-intro">${spec.intro}</p>` : ""}
         ${ctrlHTML ? `<div class="tr-ctrl"><div class="tr-ctrl-h">Thử thay đổi tình huống</div><div class="tr-ctrl-b">${ctrlHTML}</div></div>` : ""}
+        <div class="tr-mode" role="group" aria-label="Mức chi tiết"><span>Xem:</span><button data-m="brief"></button><button data-m="full"></button></div>
         <div class="tr-stage">
           <div class="tr-actors" style="--n:${A.length}">${A.map((a) => `<div class="tr-actor" data-a="${a.id}"><div class="ic">${a.icon}</div><b>${esc(a.name)}</b>${a.sub ? `<small>${esc(a.sub)}</small>` : ""}</div>`).join("")}</div>
           <div class="tr-track"></div><div class="tr-wire"></div><div class="tr-packet"></div>
@@ -112,13 +128,15 @@
         pk.style.left = clamp(x2) + "px";
       };
 
+      // Lịch sử luôn tính trên danh sách đầy đủ, kể cả khi đang xem tóm tắt
       const stateAt = (k) => {
+        const end = k ? all.indexOf(steps[k - 1]) + 1 : 0;
+        const from = k > 1 ? all.indexOf(steps[k - 2]) + 1 : 0;
         let cur = [], fresh = [];
-        for (let i = 0; i < k; i++) {
-          const s = steps[i];
-          if (s.state) cur = s.state.slice();
-          if (s.push) cur = cur.concat(s.push);
-          if (i === k - 1) fresh = s.push || (s.state ? s.state : []);
+        for (let i = 0; i < end; i++) {
+          const s = all[i];
+          if (s.state) { cur = s.state.slice(); if (i >= from) fresh = s.state.slice(); }
+          if (s.push) { cur = cur.concat(s.push); if (i >= from) fresh = fresh.concat(s.push); }
         }
         return { cur, fresh };
       };
@@ -192,6 +210,11 @@
       $('[data-b="reset"]').onclick = () => { stop(); n = 0; draw(false); };
       $('[data-b="auto"]').onclick = () => (timer ? (stop(), draw(false)) : play());
       $('[data-b="speed"]').onchange = (e) => { speed = +e.target.value; if (timer) play(); };
+      el.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => {
+        brief = b.dataset.m === "brief";
+        try { localStorage.setItem("ccaf-sim-mode", brief ? "brief" : "full"); } catch (e) {}
+        stop(); steps = getSteps(); n = 0; draw(false);
+      }));
       el.querySelectorAll("[data-c]").forEach((i) => (i.onchange = () => {
         opts[i.dataset.c] = i.type === "checkbox" ? i.checked : i.value;
         stop(); steps = getSteps(); n = 0; draw(false);

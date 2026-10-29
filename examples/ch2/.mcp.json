@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "orders": {
+      "command": "python",
+      "args": ["orders_server.py"],
+      "env": {
+        "ORDERS_API_KEY": "${ORDERS_API_KEY}"
+      }
+    }
+  }
+}
