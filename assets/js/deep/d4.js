@@ -3,59 +3,59 @@ window.DEEP_ADD({
   /* ─────────────── 4-1 ─────────────── */
   "4-1": {
     advanced: `
-<h4>🎯 Precision vs recall trong review tự động</h4>
-<table class="t">
-  <tr><th></th><th>Precision thấp (nhiều báo sai)</th><th>Recall thấp (bỏ sót)</th></tr>
-  <tr><td>Hậu quả</td><td>Dev mất niềm tin, phớt lờ cả phát hiện đúng</td><td>Lỗi lọt qua</td></tr>
-  <tr><td>Đòn bẩy</td><td>Tiêu chí “báo khi…”, “bỏ qua…”, yêu cầu bằng chứng</td><td>Mở rộng hạng mục, lượt chuyên biệt</td></tr>
-</table>
-<p>Với bot review, precision thường quan trọng hơn ở giai đoạn đầu: một bot ít comment nhưng đúng được đọc; bot nhiều comment bị tắt.</p>
-<h4>🧱 Khung tiêu chí rõ ràng</h4>
-<pre><code>&lt;report_when&gt;
-- Input người dùng tới SQL/shell/HTML không qua tham số hóa/escape
-- Comment mô tả SAI hành vi thực tế của code (trích cả hai)
-- Lỗi không được xử lý ở ranh giới I/O (mạng, file, DB)
-&lt;/report_when&gt;
-&lt;do_not_report&gt;
-- Đặt tên, định dạng, thứ tự import, sở thích style
-- Đề xuất refactor không sửa lỗi cụ thể
-&lt;/do_not_report&gt;
-&lt;severity&gt;
-CRITICAL: khai thác từ xa được. Ví dụ: query = "…" + req.query.id
-HIGH: mất/sai dữ liệu trong luồng chính. Ví dụ: …
-&lt;/severity&gt;
-Mỗi phát hiện PHẢI kèm dòng code trích nguyên văn.</code></pre>
-<h4>📏 Đo trước khi chỉnh</h4>
-<ul>
-  <li>Theo dõi tỷ lệ báo sai theo <b>từng hạng mục</b> (dev đánh dấu “không hữu ích”).</li>
-  <li>Hạng mục nhiễu → tạm tắt, tinh chỉnh tiêu chí và ví dụ, bật lại khi đạt ngưỡng.</li>
-  <li>Yêu cầu bằng chứng (trích dòng) làm giảm phát hiện “tưởng tượng”.</li>
-</ul>`,
+<section class="adv-block">
+  <h4>Báo nhầm hay bỏ sót, cái nào đáng lo hơn?</h4>
+  <p>Một bot review có thể sai theo hai kiểu: <b>báo nhầm</b> (báo một thứ không phải lỗi) và <b>bỏ sót</b> (không báo một lỗi có thật). Với bot mới triển khai, báo nhầm thường nguy hiểm hơn. Một bot ít bình luận nhưng bình luận nào cũng đúng sẽ được người ta đọc. Một bot bình luận tràn lan sẽ bị tắt hoặc bị phớt lờ, và khi đó cả những lỗi thật cũng không ai nhìn tới.</p>
+</section>
+<section class="adv-block">
+  <h4>Một bộ tiêu chí rõ ràng</h4>
+  <pre><code>Báo khi:
+- Dữ liệu người dùng nhập đi thẳng vào câu SQL, lệnh shell hoặc HTML
+  mà không được làm sạch.
+- Comment mô tả SAI hành vi thật của code (trích cả comment lẫn code).
+- Lỗi đọc ghi mạng, file, cơ sở dữ liệu không được xử lý.
+
+Không báo:
+- Cách đặt tên, định dạng, thứ tự import, sở thích cá nhân.
+- Gợi ý viết lại code mà không sửa một lỗi cụ thể nào.
+
+Mức độ:
+- NGHIÊM TRỌNG: có thể bị tấn công từ xa.
+  Ví dụ: query = "SELECT ... WHERE id=" + req.query.id
+- CAO: làm sai hoặc mất dữ liệu ở luồng chính.
+
+Mỗi phát hiện phải trích nguyên văn dòng code liên quan.</code></pre>
+  <p>Yêu cầu trích dẫn dòng code giúp giảm những phát hiện “tưởng tượng”: nếu không chỉ ra được dòng nào sai, phát hiện đó khó có thể là thật.</p>
+</section>
+<section class="adv-block">
+  <h4>Đo trước khi chỉnh</h4>
+  <p>Cho lập trình viên đánh dấu những bình luận “không hữu ích”, rồi thống kê tỷ lệ báo nhầm theo <b>từng loại</b> vấn đề. Loại nào nhiều báo nhầm thì tạm tắt, chỉnh lại tiêu chí và ví dụ cho loại đó, rồi mới bật lại.</p>
+</section>`,
     traps: [
       {
-        title: "“Chỉ báo khi chắc chắn”",
+        title: "Thêm câu “chỉ báo khi chắc chắn”",
         level: "hard",
-        scenario: "Bot báo 20 comment/PR, phần lớn là style. PM đề xuất thêm câu “Chỉ báo những vấn đề bạn rất chắc chắn là quan trọng”.",
-        bait: "Thêm câu đó vì nó ngắn gọn và trực tiếp.",
-        why: "Model không biết “quan trọng” với team bạn là gì; mức độ “chắc chắn” do model tự đánh giá không được hiệu chỉnh. Kết quả thường dao động.",
-        fix: ["Liệt kê cụ thể hạng mục cần báo và hạng mục bỏ qua.", "Định nghĩa mức độ nghiêm trọng kèm ví dụ code.", "Tạm tắt hạng mục style trong lúc chỉnh."],
+        scenario: "Bot review đăng khoảng 20 bình luận mỗi pull request, phần lớn về cách viết code cho đẹp. Quản lý đề xuất thêm câu: “Chỉ báo những vấn đề bạn rất chắc chắn là quan trọng.”",
+        bait: "Thêm câu đó vì nó ngắn gọn và đi thẳng vào vấn đề.",
+        why: "Model không biết với nhóm bạn thì “quan trọng” là gì, và mức “chắc chắn” do nó tự đánh giá chưa được kiểm chứng. Kết quả thường lúc nhiều lúc ít, không ổn định.",
+        fix: ["Liệt kê cụ thể loại vấn đề cần báo và loại cần bỏ qua.", "Định nghĩa từng mức độ nghiêm trọng, kèm ví dụ code.", "Tạm tắt nhóm bình luận về cách viết trong lúc chỉnh tiêu chí."],
       },
       {
-        title: "Lọc bằng confidence model tự báo",
-        scenario: "Team yêu cầu model ghi <code>confidence</code> và chỉ đăng comment có confidence > 0.9. Lỗi bảo mật thật đôi khi có 0.7 nên bị lọc.",
-        bait: "Hạ ngưỡng xuống 0.7.",
-        why: "Confidence chưa hiệu chỉnh không tương quan ổn định với độ đúng; chỉnh ngưỡng mù quáng chỉ dịch chuyển vấn đề.",
-        fix: ["Dùng tiêu chí rõ ràng để giảm báo sai từ gốc.", "Nếu dùng confidence, hiệu chỉnh bằng tập có nhãn và dùng để <b>định tuyến</b> (sang người duyệt), không âm thầm xóa."],
+        title: "Lọc bằng mức độ tự tin do model tự báo",
+        scenario: "Nhóm yêu cầu model ghi mức độ tự tin cho mỗi phát hiện và chỉ đăng những phát hiện trên 0,9. Một số lỗi bảo mật thật chỉ được chấm 0,7 nên bị lọc mất.",
+        bait: "Hạ ngưỡng xuống 0,7.",
+        why: "Con số tự tin chưa được đối chiếu với thực tế thì không phản ánh đúng khả năng phát hiện đó đúng hay sai. Đổi ngưỡng một cách cảm tính chỉ chuyển vấn đề sang chỗ khác.",
+        fix: ["Dùng tiêu chí cụ thể để giảm báo nhầm ngay từ gốc.", "Nếu dùng mức độ tự tin, hãy đối chiếu nó với một tập dữ liệu đã biết đúng sai, và dùng nó để quyết định chuyển cho người xem lại, chứ không phải để âm thầm xóa phát hiện."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Bot review có 3 hạng mục: bảo mật (báo sai 5%), hiệu năng (10%), comment lỗi thời (60%). Dev bắt đầu bỏ qua bot. Bước đầu tiên tốt nhất?",
-        options: ["Thêm “hãy thận trọng” vào prompt chung", "Tạm tắt hạng mục comment lỗi thời và viết lại tiêu chí cụ thể cho nó (ví dụ: chỉ báo khi comment mô tả sai hành vi thực tế) trước khi bật lại", "Tắt toàn bộ bot", "Tăng số ví dụ cho hạng mục bảo mật"],
+        q: "Bot review có ba nhóm phát hiện: bảo mật (báo nhầm 5%), hiệu năng (báo nhầm 10%), comment lỗi thời (báo nhầm 60%). Lập trình viên bắt đầu phớt lờ bot. Nên làm gì trước tiên?",
+        options: ["Thêm câu “hãy thận trọng” vào hướng dẫn chung", "Tạm tắt nhóm comment lỗi thời và viết lại tiêu chí cụ thể cho nhóm này (ví dụ chỉ báo khi comment mô tả sai hành vi thật của code) trước khi bật lại", "Tắt toàn bộ bot", "Thêm ví dụ cho nhóm bảo mật"],
         answer: 1,
-        explain: "Xử lý đúng nguồn nhiễu, giữ các hạng mục đang có giá trị, khôi phục niềm tin.",
-        notes: ["Mơ hồ, không nhắm vào hạng mục gây nhiễu.", "Đúng.", "Mất cả hạng mục bảo mật đang tốt.", "Hạng mục bảo mật không phải vấn đề."],
+        explain: "Xử lý đúng nguồn gây nhiễu, giữ lại những nhóm đang hoạt động tốt, và lấy lại niềm tin của người dùng.",
+        notes: ["Chung chung, không nhắm vào nhóm đang gây nhiễu.", "Đúng.", "Mất luôn nhóm bảo mật đang hoạt động tốt.", "Nhóm bảo mật không phải là vấn đề."],
       },
     ],
   },
@@ -63,57 +63,51 @@ Mỗi phát hiện PHẢI kèm dòng code trích nguyên văn.</code></pre>
   /* ─────────────── 4-2 ─────────────── */
   "4-2": {
     advanced: `
-<h4>📍 Đặt ví dụ ở đâu trong request?</h4>
-<pre><code>system: "Bạn phân loại ticket hỗ trợ…
+<section class="adv-block">
+  <h4>Đặt ví dụ vào prompt như thế nào</h4>
+  <pre><code>Bạn phân loại yêu cầu hỗ trợ vào một nhóm chính.
+
 &lt;examples&gt;
   &lt;example&gt;
-    &lt;ticket&gt;Bị trừ tiền 2 lần sau khi app báo lỗi&lt;/ticket&gt;
-    &lt;label&gt;billing&lt;/label&gt;&lt;secondary&gt;bug&lt;/secondary&gt;
-    &lt;why&gt;Khách bị ảnh hưởng tài chính → billing là chính; lỗi app là phụ.&lt;/why&gt;
+    &lt;ticket&gt;Bị trừ tiền hai lần sau khi app báo lỗi thanh toán&lt;/ticket&gt;
+    &lt;label&gt;billing&lt;/label&gt;
+    &lt;why&gt;Khách bị ảnh hưởng về tiền nên xếp vào billing;
+         lỗi app chỉ là nguyên nhân phụ.&lt;/why&gt;
   &lt;/example&gt;
-  …
-&lt;/examples&gt;"
-messages: [{role: "user", content: "&lt;ticket&gt;…ticket mới…&lt;/ticket&gt;"}]</code></pre>
-<ul>
-  <li>Bọc trong thẻ <code>&lt;example&gt;</code> để model tách ví dụ khỏi dữ liệu thật.</li>
-  <li>Kèm <code>&lt;why&gt;</code>: model học <b>quy tắc quyết định</b>, không chỉ học nhãn.</li>
-  <li>Có thể dùng cặp lượt user/assistant giả lập khi muốn mô phỏng đúng định dạng hội thoại.</li>
-</ul>
-<h4>🎨 Chọn ví dụ</h4>
-<table class="t">
-  <tr><th>Nên</th><th>Tránh</th></tr>
-  <tr><td>2–4 ví dụ nhắm vào ca <b>mơ hồ</b>, ranh giới giữa các nhãn</td><td>Nhiều ví dụ dễ, giống nhau</td></tr>
-  <tr><td>Đa dạng về hình thức (ngắn/dài, có/không định dạng)</td><td>Ví dụ cùng chủ đề → model bắt chước nội dung bề mặt</td></tr>
-  <tr><td>Cả ví dụ “nên báo” lẫn “chấp nhận được”</td><td>Chỉ ví dụ tích cực → báo quá tay</td></tr>
-  <tr><td>Nhất quán với chỉ dẫn</td><td>Ví dụ mâu thuẫn với quy tắc đã viết</td></tr>
-</table>
-<h4>🧪 Few-shot cho trích xuất</h4>
-<p>Tài liệu có nhiều cấu trúc (trích dẫn inline vs danh mục tham khảo cuối bài; bảng vs đoạn văn): mỗi cấu trúc một ví dụ ngắn cho thấy chỗ cần lấy dữ liệu và khi nào trả <code>null</code> → giảm bịa.</p>`,
+  ...
+&lt;/examples&gt;</code></pre>
+  <p>Thẻ <code>&lt;example&gt;</code> giúp model phân biệt đâu là ví dụ, đâu là dữ liệu thật cần xử lý. Phần <code>&lt;why&gt;</code> dạy model <b>cách quyết định</b>, nhờ đó nó áp dụng được cho những trường hợp chưa gặp, thay vì chỉ học thuộc đáp án.</p>
+</section>
+<section class="adv-block">
+  <h4>Chọn ví dụ cho tốt</h4>
+  <p><b>Nên</b> chọn những trường hợp nằm ở ranh giới giữa các lựa chọn, vì đó là chỗ model đang hay nhầm. Ví dụ nên đa dạng về hình thức: ngắn, dài, viết lộn xộn, viết gọn gàng. Có cả ví dụ “nên báo” và “không cần báo”.</p>
+  <p><b>Tránh</b> đưa nhiều ví dụ dễ và giống nhau; khi đó model học bắt chước những chi tiết bề ngoài. Đặc biệt tránh ví dụ mâu thuẫn với hướng dẫn đã viết, vì model thường nghe theo ví dụ hơn là nghe theo lời dặn.</p>
+</section>`,
     traps: [
       {
-        title: "Ví dụ quá giống nhau",
+        title: "Các ví dụ quá giống nhau",
         level: "hard",
-        scenario: "4 ví dụ trích xuất đều là hóa đơn của cùng một nhà cung cấp, mẫu in giống nhau. Với hóa đơn mẫu khác, model điền tên nhà cung cấp cũ vào trường vendor.",
-        bait: "Thêm 10 ví dụ nữa từ cùng nhà cung cấp cho “chắc”.",
-        why: "Ví dụ đồng dạng dạy model sao chép đặc điểm bề mặt thay vì quy tắc.",
-        fix: ["Đa dạng hóa: các bố cục, ngôn ngữ, ca thiếu trường.", "Thêm một ví dụ có trường vắng mặt → null.", "Ghi <code>why</code> giải thích vị trí lấy dữ liệu."],
+        scenario: "Bốn ví dụ trích xuất đều là hóa đơn của cùng một nhà cung cấp, cùng một mẫu in. Gặp hóa đơn mẫu khác, model điền luôn tên nhà cung cấp cũ vào ô tên nhà cung cấp.",
+        bait: "Thêm mười ví dụ nữa từ chính nhà cung cấp đó cho chắc.",
+        why: "Ví dụ giống hệt nhau dạy model sao chép đặc điểm bề ngoài, thay vì hiểu quy tắc lấy dữ liệu.",
+        fix: ["Đa dạng hóa ví dụ: nhiều mẫu hóa đơn, nhiều ngôn ngữ, có cả trường hợp thiếu thông tin.", "Thêm một ví dụ có trường bị thiếu, trả về null.", "Kèm giải thích dữ liệu được lấy từ vị trí nào trên hóa đơn."],
       },
       {
-        title: "Ví dụ mâu thuẫn chỉ dẫn",
-        scenario: "Chỉ dẫn: “ticket vừa billing vừa bug → nhãn chính billing”. Một ví dụ cũ lại gán bug cho ca tương tự. Kết quả dao động.",
-        bait: "Viết HOA chỉ dẫn.",
-        why: "Ví dụ thường có sức nặng lớn; mâu thuẫn tạo hai tín hiệu đối nghịch.",
-        fix: ["Rà toàn bộ ví dụ cho nhất quán với quy tắc.", "Coi ví dụ là một phần đặc tả, review như code."],
+        title: "Ví dụ mâu thuẫn với hướng dẫn",
+        scenario: "Hướng dẫn ghi: yêu cầu vừa liên quan tiền vừa liên quan lỗi app thì xếp vào billing. Một ví dụ cũ lại xếp trường hợp y như vậy vào bug. Kết quả phân loại lúc thế này lúc thế khác.",
+        bait: "Viết hoa câu hướng dẫn.",
+        why: "Model thường coi trọng ví dụ, nên ví dụ mâu thuẫn tạo ra hai tín hiệu ngược nhau.",
+        fix: ["Rà lại toàn bộ ví dụ cho khớp với hướng dẫn.", "Coi ví dụ là một phần của bản yêu cầu, xem xét kỹ như xem xét code."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Model phân loại tốt ca rõ ràng nhưng dao động ở ca nằm giữa hai nhãn. Bạn có ngân sách cho 4 ví dụ. Chọn bộ ví dụ nào?",
-        options: ["4 ca rõ ràng nhất của mỗi nhãn", "4 ca ranh giới giữa các nhãn, mỗi ca kèm lý do chọn nhãn", "4 ca ngẫu nhiên từ log", "4 ca dài nhất"],
+        q: "Model phân loại tốt những trường hợp rõ ràng, nhưng dao động ở những trường hợp nằm giữa hai nhóm. Bạn chỉ có chỗ cho bốn ví dụ. Nên chọn ví dụ nào?",
+        options: ["Bốn trường hợp rõ ràng nhất của mỗi nhóm", "Bốn trường hợp nằm ở ranh giới giữa các nhóm, mỗi trường hợp có giải thích vì sao chọn nhóm đó", "Bốn trường hợp lấy ngẫu nhiên từ dữ liệu cũ", "Bốn trường hợp dài nhất"],
         answer: 1,
-        explain: "Ví dụ có giá trị nhất là ở chỗ model đang sai; lý do giúp khái quát quy tắc.",
-        notes: ["Model đã làm tốt ca rõ ràng.", "Đúng.", "Phần lớn sẽ là ca dễ.", "Độ dài không liên quan tới ranh giới quyết định."],
+        explain: "Ví dụ có giá trị nhất là ở chỗ model đang làm sai. Phần giải thích giúp model hiểu quy tắc để áp dụng cho trường hợp mới.",
+        notes: ["Model vốn đã làm tốt những trường hợp rõ ràng.", "Đúng.", "Phần lớn sẽ là trường hợp dễ.", "Độ dài không liên quan tới ranh giới quyết định."],
       },
     ],
   },
@@ -122,52 +116,45 @@ messages: [{role: "user", content: "&lt;ticket&gt;…ticket mới…&lt;/ticket&
   "4-3": {
     widgets: ["extractionTrace", "schemaDemo"],
     advanced: `
-<h4>🧪 Schema đảm bảo gì, không đảm bảo gì</h4>
-<table class="t">
-  <tr><th>Đảm bảo (cấu trúc)</th><th>Không đảm bảo (ngữ nghĩa)</th></tr>
-  <tr><td>JSON hợp lệ, đúng kiểu, có trường bắt buộc, giá trị trong enum</td><td>Giá trị đúng với tài liệu, tổng khớp, ngày hợp lý, đúng trường</td></tr>
-</table>
-<p>API còn có chế độ <b>structured outputs / strict</b> (ràng buộc giải mã theo schema) giúp đảm bảo tuân thủ schema chặt hơn — đối chiếu tài liệu hiện hành. Dù vậy, kiểm tra ngữ nghĩa vẫn là việc của code bạn.</p>
-<h4>🧩 Mẫu thiết kế schema</h4>
-<table class="t">
-  <tr><th>Mẫu</th><th>Ví dụ</th><th>Chống lỗi gì</th></tr>
-  <tr><td>Nullable cho trường có thể vắng</td><td><code>"renewal_date": {"type": ["string","null"]}</code></td><td>Bịa giá trị</td></tr>
-  <tr><td>enum + "other" + detail</td><td><code>service_type: other</code>, <code>service_detail: "tư vấn pháp lý"</code></td><td>Ép sai danh mục</td></tr>
-  <tr><td>Giá trị “unclear”</td><td><code>status: "unclear"</code></td><td>Đoán khi tài liệu mơ hồ</td></tr>
-  <tr><td>Trường bằng chứng</td><td><code>evidence_quote</code></td><td>Giá trị không có nguồn</td></tr>
-  <tr><td>Tự đối chiếu</td><td><code>stated_total</code> + <code>line_items</code></td><td>Sót dòng, tổng sai</td></tr>
-  <tr><td>Mô tả trong schema</td><td><code>"description": "YYYY-MM-DD"</code></td><td>Định dạng không đồng nhất</td></tr>
-</table>
-<h4>⚙️ Pipeline đầy đủ</h4>
-<div class="dg dg-anim">
-  <div class="dn"><b>Tool + schema</b></div><span class="da">→</span><div class="dn"><b>tool_choice ép</b></div><span class="da">→</span><div class="dn"><b>Lấy tool_use.input</b></div><span class="da">→</span><div class="dn hot"><b>Validator ngữ nghĩa</b></div><span class="da">→</span><div class="dn good"><b>Lưu / retry / duyệt tay</b></div>
-</div>`,
+<section class="adv-block">
+  <h4>Schema đảm bảo được gì, không đảm bảo được gì</h4>
+  <p>Schema đảm bảo <b>hình dạng</b> của dữ liệu: JSON hợp lệ, đủ các trường bắt buộc, đúng kiểu dữ liệu, giá trị nằm trong danh sách cho phép.</p>
+  <p>Schema không đảm bảo <b>nội dung đúng</b>: con số có khớp với tài liệu không, tổng các dòng có bằng tổng tiền không, ngày có hợp lý không, giá trị có nằm đúng ô không. Những điều này cần code của bạn kiểm tra thêm sau khi nhận kết quả.</p>
+  <p>API hiện có thêm chế độ đầu ra có cấu trúc nghiêm ngặt (structured outputs), ép model sinh đúng theo schema ngay khi tạo câu trả lời. Chế độ này làm phần “hình dạng” chắc chắn hơn nữa, nhưng phần “nội dung đúng” vẫn là việc của bạn.</p>
+</section>
+<section class="adv-block">
+  <h4>Bốn mẹo thiết kế schema</h4>
+  <p><b>Cho phép null</b> với những trường có thể không có trong tài liệu, ví dụ ngày gia hạn hợp đồng. Nếu bắt buộc phải điền, model sẽ bịa ra một giá trị trông hợp lý.</p>
+  <p><b>Thêm “other” kèm ô mô tả</b> cho danh sách lựa chọn. Nếu không có lối thoát này, một hợp đồng tư vấn pháp lý sẽ bị ép vào nhóm gần nhất, ví dụ “it”.</p>
+  <p><b>Thêm ô trích dẫn</b>, ví dụ <code>evidence_quote</code>, để biết giá trị lấy từ câu nào trong tài liệu. Code có thể kiểm tra câu đó có thật trong tài liệu hay không.</p>
+  <p><b>Ghi định dạng ngay trong mô tả trường</b>, ví dụ “YYYY-MM-DD”, để mọi ngày tháng đều về cùng một dạng.</p>
+</section>`,
     traps: [
       {
-        title: "Ngày gia hạn “trông hợp lý”",
+        title: "Ngày gia hạn “trông rất hợp lý”",
         level: "hard",
-        scenario: "Pipeline hợp đồng có <code>renewal_date</code> required, kiểu string. Hợp đồng không gia hạn được trích thành ngày kết thúc + 1 năm. Validator không bắt vì định dạng đúng và ngày hợp lý.",
-        bait: "Thêm vào prompt “không được bịa”.",
-        why: "Schema buộc model phải điền một chuỗi; không có cách hợp lệ để nói “không có”.",
-        fix: ["Đổi sang <code>[\"string\",\"null\"]</code> với mô tả “null nếu không có điều khoản gia hạn”.", "Thêm <code>evidence_quote</code> bắt buộc khi có giá trị; validator kiểm tra trích đoạn có trong nguồn."],
+        scenario: "Trong pipeline trích xuất hợp đồng, trường <code>renewal_date</code> là bắt buộc và kiểu chuỗi. Với hợp đồng không có điều khoản gia hạn, model điền ngày kết thúc cộng thêm một năm. Bước kiểm tra không phát hiện được vì định dạng đúng và ngày nghe hợp lý.",
+        bait: "Thêm vào prompt: “không được bịa thông tin”.",
+        why: "Schema bắt buộc phải có một chuỗi, nên model không có cách hợp lệ nào để nói “không có”.",
+        fix: ["Cho phép trường nhận null, và ghi trong mô tả: “để null nếu hợp đồng không có điều khoản gia hạn”.", "Thêm ô trích dẫn bắt buộc khi trường có giá trị, rồi kiểm tra câu trích dẫn có thật trong tài liệu."],
       },
       {
         title: "Tin rằng JSON hợp lệ là dữ liệu đúng",
-        scenario: "Sau khi chuyển sang tool_use + schema, tỷ lệ lỗi parse về 0. Team bỏ bước kiểm tra tổng tiền. Một tháng sau phát hiện 3% hóa đơn sai tổng.",
-        bait: "Kết luận schema đã giải quyết chất lượng.",
-        why: "Schema loại lỗi cú pháp, không loại lỗi ngữ nghĩa.",
-        fix: ["Giữ validator ngữ nghĩa: tổng dòng = tổng ghi, ngày hợp lệ, tham chiếu chéo.", "Lỗi ngữ nghĩa → retry kèm lỗi cụ thể (4-4) hoặc duyệt tay."],
+        scenario: "Sau khi chuyển sang trích xuất bằng công cụ có schema, lỗi đọc JSON giảm về 0. Nhóm bỏ luôn bước kiểm tra tổng tiền. Một tháng sau mới phát hiện 3% hóa đơn bị sai tổng.",
+        bait: "Kết luận rằng schema đã giải quyết xong vấn đề chất lượng.",
+        why: "Schema chỉ loại bỏ lỗi cú pháp, không loại bỏ lỗi về nội dung.",
+        fix: ["Giữ bước kiểm tra nội dung: tổng các dòng bằng tổng ghi trên hóa đơn, ngày hợp lệ, đối chiếu chéo.", "Khi phát hiện lỗi nội dung thì thử lại kèm mô tả lỗi, hoặc chuyển cho người kiểm tra."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Trích xuất loại dịch vụ với enum [it, marketing]. Hợp đồng tư vấn pháp lý bị gán \"it\". Sửa schema thế nào tốt nhất?",
-        options: ["Thêm \"legal\" vào enum", "Thêm \"other\" vào enum kèm trường service_detail (nullable) để mô tả", "Bỏ enum, cho string tự do", "Đặt service_type nullable"],
+        q: "Trường loại dịch vụ chỉ cho phép hai giá trị [it, marketing]. Một hợp đồng tư vấn pháp lý bị xếp vào \"it\". Sửa schema thế nào là tốt nhất?",
+        options: ["Thêm \"legal\" vào danh sách", "Thêm \"other\" vào danh sách, kèm một trường service_detail (cho phép null) để mô tả", "Bỏ danh sách, cho nhập chữ tự do", "Cho phép trường loại dịch vụ nhận null"],
         answer: 1,
-        explain: "Danh mục mở rộng được cần lối thoát “other” + chi tiết; vẫn giữ được giá trị chuẩn cho phân tích.",
-        notes: ["Sửa một ca, ca mới khác vẫn bị ép sai.", "Đúng.", "Mất chuẩn hóa, khó thống kê.", "Mất thông tin — loại dịch vụ có tồn tại, chỉ không nằm trong danh sách."],
-        trap: "A giải quyết đúng ca trước mắt nên rất hấp dẫn, nhưng không bền.",
+        explain: "Danh sách có thể còn mở rộng thì cần một lối thoát “other” kèm mô tả. Cách này vẫn giữ được các giá trị chuẩn để thống kê.",
+        notes: ["Chỉ sửa được trường hợp này; loại dịch vụ mới khác vẫn bị ép sai.", "Đúng.", "Mất tính thống nhất, khó thống kê.", "Mất thông tin: loại dịch vụ có tồn tại, chỉ là không nằm trong danh sách."],
+        trap: "Phương án A giải quyết đúng trường hợp trước mắt nên rất hấp dẫn, nhưng không bền.",
       },
     ],
   },
@@ -175,56 +162,49 @@ messages: [{role: "user", content: "&lt;ticket&gt;…ticket mới…&lt;/ticket&
   /* ─────────────── 4-4 ─────────────── */
   "4-4": {
     advanced: `
-<h4>🔁 Retry kèm phản hồi = hội thoại nhiều lượt</h4>
-<pre><code>messages = [
-  {"role": "user", "content": "&lt;document&gt;…&lt;/document&gt;"},
-  {"role": "assistant", "content": [tool_use(extract_invoice, input=bản_lỗi)]},
+<section class="adv-block">
+  <h4>Thử lại kèm phản hồi thực chất là một cuộc trò chuyện</h4>
+  <pre><code>messages = [
+  {"role": "user", "content": "&lt;document&gt;...&lt;/document&gt;"},
+  {"role": "assistant", "content": [kết quả trích xuất lần 1]},
   {"role": "user", "content": [{
-     "type": "tool_result", "tool_use_id": "…", "is_error": true,
-     "content": "Lỗi kiểm tra:\\n- invoice_date phải YYYY-MM-DD\\n- tổng dòng 1140 ≠ 1240"
+     "type": "tool_result", "is_error": true,
+     "content": "Lỗi kiểm tra:\\n- invoice_date phải theo dạng YYYY-MM-DD\\n- tổng các dòng 1140 khác tổng ghi 1240"
   }]}
 ]</code></pre>
-<p>Model thấy: nguồn, câu trả lời cũ của chính nó, và lỗi cụ thể → sửa có mục tiêu thay vì sinh lại ngẫu nhiên.</p>
-<h4>🧭 Retry có ích hay vô ích?</h4>
-<table class="t">
-  <tr><th>Loại lỗi</th><th>Retry kèm phản hồi</th></tr>
-  <tr><td>Sai định dạng (ngày, số)</td><td>✅ Hiệu quả</td></tr>
-  <tr><td>Đặt sai trường (ngày giao vào ngày hóa đơn)</td><td>✅ Hiệu quả</td></tr>
-  <tr><td>Sót dòng / tổng lệch</td><td>✅ Thường hiệu quả</td></tr>
-  <tr><td>Thông tin không có trong nguồn</td><td>❌ Vô ích — retry chỉ tăng nguy cơ bịa</td></tr>
-  <tr><td>Nguồn mờ/hỏng (scan kém)</td><td>❌ Cần nguồn tốt hơn hoặc người duyệt</td></tr>
-</table>
-<h4>🧰 Thiết kế vòng lặp</h4>
-<ul>
-  <li>Ngân sách retry nhỏ (1–2 lần); hết ngân sách → hàng đợi người duyệt kèm lỗi cuối.</li>
-  <li>Trước khi retry trường thiếu: kiểm tra nhanh nguồn có chứa dấu hiệu của trường đó không.</li>
-  <li>Ghi <code>detected_pattern</code> (ví dụ “hóa đơn 2 trang”, “bảng không viền”) để thống kê cấu trúc nào hay lỗi và cải thiện prompt có mục tiêu.</li>
-</ul>`,
+  <p>Trong lần thử lại, Claude nhìn thấy cả tài liệu gốc, kết quả lần trước của chính nó, và lỗi cụ thể. Vì vậy nó sửa đúng chỗ thay vì làm lại một cách ngẫu nhiên.</p>
+</section>
+<section class="adv-block">
+  <h4>Lỗi nào thử lại có ích</h4>
+  <p><b>Có ích:</b> sai định dạng (ngày, số), điền nhầm ô (ngày giao hàng vào ô ngày hóa đơn), sót một dòng khiến tổng bị lệch.</p>
+  <p><b>Vô ích:</b> thông tin không có trong tài liệu, hoặc tài liệu bị mờ, hỏng. Thử lại lúc này chỉ làm tăng khả năng model bịa ra giá trị. Cách đúng là để trống và chuyển cho người kiểm tra.</p>
+  <p>Hãy giới hạn số lần thử, thường là một đến hai lần. Hết lượt thì chuyển cho người kiểm tra, kèm lỗi cuối cùng. Trước khi thử lại vì thiếu một trường, nên kiểm tra nhanh xem tài liệu có chứa dấu hiệu nào của trường đó không.</p>
+</section>`,
     traps: [
       {
-        title: "Tăng số lần retry",
+        title: "Tăng số lần thử lại",
         level: "hard",
-        scenario: "8% hóa đơn thiếu <code>po_number</code> sau 3 lần retry. Đề xuất: tăng lên 10 lần. Sau thay đổi, tỷ lệ thiếu giảm còn 1% — nhưng kiểm tra mẫu cho thấy nhiều số PO là bịa.",
-        bait: "Ăn mừng vì chỉ số thiếu giảm.",
-        why: "Phần lớn hóa đơn đó không ghi số PO. Áp lực retry khiến model điền chuỗi “hợp lệ” cho xong.",
-        fix: ["Kiểm tra nguồn trước khi retry trường thiếu.", "Nguồn không có → null + cờ <code>missing_in_source</code> → người duyệt / tra hệ thống mua hàng.", "Theo dõi chất lượng bằng lấy mẫu kiểm tra, không chỉ tỷ lệ điền đủ."],
+        scenario: "8% hóa đơn vẫn thiếu số đơn đặt hàng (PO) sau ba lần thử lại. Nhóm tăng lên mười lần. Tỷ lệ thiếu giảm còn 1%, nhưng khi kiểm tra mẫu thì phát hiện nhiều số PO là bịa.",
+        bait: "Vui mừng vì tỷ lệ thiếu đã giảm.",
+        why: "Phần lớn các hóa đơn đó vốn không ghi số PO. Bị ép thử lại nhiều lần, model điền một chuỗi trông hợp lệ cho xong.",
+        fix: ["Trước khi thử lại vì thiếu trường, kiểm tra tài liệu có chứa thông tin đó không.", "Nếu tài liệu không có: để null, đánh dấu “không có trong tài liệu”, chuyển cho người kiểm tra hoặc tra hệ thống mua hàng.", "Đánh giá chất lượng bằng cách kiểm tra mẫu, không chỉ nhìn tỷ lệ điền đủ."],
       },
       {
-        title: "Retry mù",
-        scenario: "Validator lỗi → pipeline gửi lại đúng request ban đầu (không kèm gì).",
-        bait: "“Thử lại có thể ra kết quả khác.”",
-        why: "Model không biết đã sai ở đâu; kết quả mới có thể sai theo cách khác.",
-        fix: ["Gửi kèm output cũ + lỗi cụ thể như tool_result is_error.", "Giới hạn số lần."],
+        title: "Thử lại mà không nói lỗi gì",
+        scenario: "Bước kiểm tra phát hiện lỗi, và pipeline gửi lại y nguyên yêu cầu ban đầu, không kèm thêm gì.",
+        bait: "Nghĩ rằng thử lại biết đâu sẽ ra kết quả khác.",
+        why: "Model không biết mình sai ở đâu. Kết quả mới có thể sai theo một kiểu khác.",
+        fix: ["Gửi kèm kết quả lần trước và mô tả lỗi cụ thể.", "Giới hạn số lần thử."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Validator báo: invoice_date \"15/03/2026\" sai định dạng và vendor_tax_id trống. Kiểm tra nguồn: có ngày, nhưng không có mã số thuế. Hành động đúng?",
-        options: ["Retry kèm cả hai lỗi", "Retry kèm lỗi định dạng ngày; với vendor_tax_id: giữ null, gắn cờ thiếu trong nguồn", "Không retry, gửi cả hai cho người duyệt", "Retry 5 lần không kèm lỗi"],
+        q: "Bước kiểm tra báo: ngày hóa đơn \"15/03/2026\" sai định dạng, và ô mã số thuế bị trống. Kiểm tra tài liệu gốc thì thấy có ngày, nhưng không hề có mã số thuế. Nên làm gì?",
+        options: ["Thử lại kèm cả hai lỗi", "Thử lại kèm lỗi định dạng ngày; còn mã số thuế thì để null và đánh dấu “không có trong tài liệu”", "Không thử lại, chuyển cả hai cho người kiểm tra", "Thử lại năm lần mà không kèm mô tả lỗi"],
         answer: 1,
-        explain: "Tách lỗi sửa được (định dạng) khỏi thông tin vắng mặt (retry vô ích, dễ gây bịa).",
-        notes: ["Retry trường vắng mặt khuyến khích bịa.", "Đúng.", "Bỏ lỡ việc sửa tự động dễ dàng.", "Retry mù và quá nhiều."],
+        explain: "Tách phần sửa được (định dạng ngày) khỏi phần thông tin không tồn tại (thử lại vô ích và dễ dẫn tới bịa).",
+        notes: ["Thử lại với trường không có trong tài liệu sẽ khuyến khích model bịa.", "Đúng.", "Bỏ lỡ cơ hội tự sửa một lỗi dễ.", "Thử lại không kèm thông tin, lại còn quá nhiều lần."],
       },
     ],
   },
@@ -233,53 +213,49 @@ messages: [{role: "user", content: "&lt;ticket&gt;…ticket mới…&lt;/ticket&
   "4-5": {
     widgets: ["batchTrace", "batchDecider"],
     advanced: `
-<h4>📮 Các endpoint</h4>
-<table class="t">
-  <tr><th>Thao tác</th><th>Endpoint</th></tr>
-  <tr><td>Tạo</td><td><code>POST /v1/messages/batches</code></td></tr>
-  <tr><td>Xem trạng thái</td><td><code>GET /v1/messages/batches/{id}</code></td></tr>
-  <tr><td>Tải kết quả (JSONL)</td><td><code>results_url</code> khi <code>processing_status = ended</code></td></tr>
-  <tr><td>Hủy</td><td><code>POST /v1/messages/batches/{id}/cancel</code></td></tr>
-</table>
-<h4>📏 Đặc điểm cần nhớ</h4>
-<ul>
-  <li>Giảm khoảng 50% chi phí; xử lý bất đồng bộ, tối đa 24 giờ — request chưa xong thì <code>expired</code>.</li>
-  <li>Giới hạn kích thước mỗi batch (hàng chục nghìn request / vài trăm MB — xem tài liệu hiện hành); kết quả lưu có thời hạn.</li>
-  <li>Kết quả <b>không theo thứ tự</b> — ghép bằng <code>custom_id</code>.</li>
-  <li>Mỗi request là <b>một lượt</b>: có thể kèm tools và nhận tool_use, nhưng muốn chạy công cụ rồi tiếp tục thì phải gửi lượt sau (batch mới hoặc gọi đồng bộ).</li>
-  <li>Kết hợp được với prompt caching (phần system/tài liệu chung).</li>
-</ul>
-<h4>🧮 Tính lịch gửi theo SLA</h4>
-<div class="dg dg-anim">
-  <div class="dn"><b>Hạn chót</b>T + 30h</div><span class="da">−</span><div class="dn"><b>Cửa sổ batch tối đa</b>24h</div><span class="da">−</span><div class="dn"><b>Dự phòng gửi lại phần lỗi</b>vài giờ</div><span class="da">=</span><div class="dn hot"><b>Gửi trước</b>≈ T + 4–6h</div>
-</div>
-<h4>🧭 Khi nào không dùng</h4>
-<ul><li>Có người đang chờ (chat, pre-merge check, API đồng bộ).</li><li>Vòng lặp agent nhiều lượt cần kết quả công cụ ngay.</li><li>Hạn chót ngắn hơn cửa sổ xử lý.</li></ul>`,
+<section class="adv-block">
+  <h4>Vòng đời của một batch</h4>
+  <ol class="steps-dg">
+    <li>Gửi một danh sách yêu cầu lên <code>/v1/messages/batches</code>, mỗi yêu cầu có một <code>custom_id</code> do bạn đặt.</li>
+    <li>Nhận về mã batch. Trạng thái ban đầu là “đang xử lý” (<code>in_progress</code>).</li>
+    <li>Thỉnh thoảng hỏi lại trạng thái, ví dụ vài phút một lần, cho tới khi trạng thái là “đã xong” (<code>ended</code>).</li>
+    <li>Tải file kết quả. Mỗi dòng là kết quả của một yêu cầu, và <b>không theo thứ tự đã gửi</b>.</li>
+    <li class="hot">Ghép kết quả theo <code>custom_id</code>, rồi gửi lại riêng những yêu cầu bị lỗi.</li>
+  </ol>
+</section>
+<section class="adv-block">
+  <h4>Batch và vòng lặp gọi công cụ</h4>
+  <p>Mỗi yêu cầu trong batch chỉ là một lượt hỏi và đáp. Claude có thể trả về yêu cầu chạy công cụ, nhưng không có ai chạy công cụ đó và gửi kết quả lại ngay trong batch. Vì vậy những việc cần nhiều lượt gọi công cụ không phù hợp với batch, trừ khi bạn chấp nhận chia thành nhiều vòng: batch lượt 1, chạy công cụ, rồi batch lượt 2, và cứ thế.</p>
+</section>
+<section class="adv-block">
+  <h4>Tính giờ gửi cho kịp hạn</h4>
+  <p>Hạn chót trừ đi 24 giờ (thời gian xử lý tối đa) là thời điểm muộn nhất phải gửi batch. Nên trừ thêm vài giờ dự phòng cho vòng gửi lại những yêu cầu bị lỗi. Ví dụ hạn là 30 giờ nữa thì nên gửi trong khoảng 4 tới 6 giờ đầu.</p>
+</section>`,
     traps: [
       {
-        title: "Agent nhiều lượt trong batch",
+        title: "Agent cần nhiều lượt nhưng lại chạy bằng batch",
         level: "hard",
-        scenario: "Team muốn chạy agent điều tra (cần 5–10 lượt gọi công cụ) cho 5.000 ticket qua đêm bằng Batch API để tiết kiệm. Mỗi request trong batch chỉ trả về một tool_use rồi dừng.",
-        bait: "Kết luận Batch API bị lỗi.",
-        why: "Batch xử lý mỗi request như một lượt riêng; không ai chạy công cụ và gửi tool_result trong cùng request.",
-        fix: ["Cách 1: chạy đồng bộ (song song có giới hạn) cho tác vụ nhiều lượt.", "Cách 2: thiết kế theo vòng: batch lượt 1 → chạy công cụ → batch lượt 2 với messages đã nối tool_result… (chấp nhận độ trễ nhiều vòng).", "Hoặc tái thiết kế thành tác vụ một lượt (đưa sẵn dữ liệu cần thiết vào prompt)."],
+        scenario: "Nhóm muốn chạy agent điều tra (mỗi việc cần 5 tới 10 lượt gọi công cụ) cho 5.000 yêu cầu hỗ trợ qua đêm bằng Batch API để tiết kiệm. Mỗi yêu cầu trong batch chỉ trả về một lệnh gọi công cụ rồi dừng.",
+        bait: "Kết luận rằng Batch API bị lỗi.",
+        why: "Batch xử lý mỗi yêu cầu như một lượt riêng. Không có ai chạy công cụ và gửi kết quả lại trong cùng yêu cầu đó.",
+        fix: ["Cách 1: chạy trực tiếp, song song có giới hạn, cho những việc cần nhiều lượt.", "Cách 2: chia thành nhiều vòng batch, sau mỗi vòng chạy công cụ rồi gửi vòng tiếp theo, chấp nhận chờ lâu hơn.", "Cách 3: thiết kế lại để mỗi việc chỉ cần một lượt, bằng cách đưa sẵn dữ liệu cần thiết vào yêu cầu."],
       },
       {
-        title: "Ghép kết quả theo số dòng",
-        scenario: "Script ghép dòng thứ i của results.jsonl với tài liệu thứ i. Báo cáo gán nhầm kết quả giữa các khách hàng.",
-        bait: "Sắp xếp lại input cho khớp.",
-        why: "Thứ tự kết quả không được đảm bảo.",
-        fix: ["Luôn ghép bằng <code>custom_id</code> (mã tài liệu duy nhất)."],
+        title: "Ghép kết quả theo số thứ tự dòng",
+        scenario: "Script ghép dòng thứ i của file kết quả với tài liệu thứ i đã gửi. Báo cáo gán nhầm kết quả của khách hàng này sang khách hàng khác.",
+        bait: "Sắp xếp lại danh sách gửi đi cho khớp.",
+        why: "Thứ tự kết quả không được đảm bảo giống thứ tự gửi.",
+        fix: ["Luôn ghép bằng <code>custom_id</code>, đặt bằng mã tài liệu duy nhất."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Báo cáo tuân thủ phải có trước 09:00 sáng thứ Hai. Dữ liệu sẵn sàng lúc 18:00 thứ Sáu. Kế hoạch dùng Batch API hợp lý nhất?",
-        options: ["Gửi batch lúc 08:00 thứ Hai", "Gửi batch ngay tối thứ Sáu; khi xong, gửi lại phần errored theo custom_id — vẫn còn nhiều thời gian dự phòng", "Không dùng Batch vì không có SLA", "Gửi từng request đồng bộ vào sáng thứ Hai"],
+        q: "Báo cáo tuân thủ phải có trước 9 giờ sáng thứ Hai. Dữ liệu sẵn sàng lúc 18 giờ thứ Sáu. Kế hoạch dùng Batch API nào hợp lý nhất?",
+        options: ["Gửi batch lúc 8 giờ sáng thứ Hai", "Gửi batch ngay tối thứ Sáu; khi xong thì gửi lại những yêu cầu lỗi theo custom_id, vẫn còn dư thời gian", "Không dùng Batch vì không có cam kết thời gian", "Gửi từng yêu cầu trực tiếp vào sáng thứ Hai"],
         answer: 1,
-        explain: "Cửa sổ ~63 giờ dư cho tối đa 24 giờ xử lý cộng một vòng gửi lại phần lỗi.",
-        notes: ["Chỉ còn 1 giờ, batch có thể mất tới 24 giờ.", "Đúng.", "Không có SLA không có nghĩa là không dùng được — chỉ cần lịch gửi hợp lý.", "Đắt gấp đôi và rủi ro dồn việc."],
+        explain: "Khoảng 63 giờ dư sức cho tối đa 24 giờ xử lý, cộng thêm một vòng gửi lại.",
+        notes: ["Chỉ còn 1 giờ, trong khi batch có thể mất tới 24 giờ.", "Đúng.", "Không có cam kết thời gian không có nghĩa là không dùng được; chỉ cần tính giờ gửi hợp lý.", "Chi phí gấp đôi và dồn hết việc vào phút chót."],
       },
     ],
   },
@@ -288,49 +264,40 @@ messages: [{role: "user", content: "&lt;ticket&gt;…ticket mới…&lt;/ticket&
   "4-6": {
     widgets: ["multiPassTrace", "multiPass"],
     advanced: `
-<h4>🪞 Vì sao tự review kém hiệu quả?</h4>
-<p>Phiên vừa sinh code mang theo chuỗi lập luận đã dẫn tới code đó. Khi review, nó có xu hướng xác nhận lại giả định của chính mình. Bật extended thinking trong <b>cùng</b> phiên không xóa được neo này.</p>
-<h4>🧪 Thiết kế reviewer độc lập</h4>
-<ul>
-  <li>Instance mới, ngữ cảnh sạch: chỉ có diff/code + tiêu chí, không có lịch sử sinh.</li>
-  <li>Prompt vai trò khác (“tìm cách làm code này hỏng”).</li>
-  <li>Có thể dùng nhiều reviewer chuyên biệt (bảo mật, đồng thời, xử lý lỗi) chạy song song.</li>
-</ul>
-<h4>🧭 Định tuyến theo độ tin cậy</h4>
-<table class="t">
-  <tr><th>Confidence (đã hiệu chỉnh)</th><th>Hành động</th></tr>
-  <tr><td>Cao</td><td>Đăng comment tự động</td></tr>
-  <tr><td>Trung bình</td><td>Người duyệt xác nhận</td></tr>
-  <tr><td>Thấp</td><td>Ghi log, dùng để cải thiện tiêu chí</td></tr>
-</table>
-<p>Confidence là tín hiệu <b>định tuyến</b>, không phải bộ lọc xóa — và chỉ đáng tin sau khi so với nhãn thực tế (xem 5-5).</p>
-<h4>🔄 Evaluator–optimizer</h4>
-<p>Một instance sinh, một instance đánh giá theo rubric, lặp tới khi đạt hoặc hết ngân sách — tách vai giúp đánh giá khách quan hơn.</p>`,
+<section class="adv-block">
+  <h4>Vì sao suy nghĩ lâu hơn vẫn không bằng người khác đọc</h4>
+  <p>Phiên vừa viết code mang theo toàn bộ cách lập luận đã dẫn tới đoạn code đó. Khi tự review, nó có xu hướng xác nhận lại những giả định của chính mình. Bật chế độ suy nghĩ mở rộng trong <b>cùng</b> phiên đó không giúp nó thoát khỏi những giả định này.</p>
+  <p>Một phiên review độc lập bắt đầu với ngữ cảnh sạch: chỉ có đoạn code và tiêu chí review. Có thể giao cho nó vai trò khác hẳn, ví dụ “hãy tìm mọi cách làm cho đoạn code này hỏng”. Với thay đổi quan trọng, có thể dùng nhiều phiên review chuyên biệt chạy song song: một phiên về bảo mật, một phiên về xử lý đồng thời, một phiên về xử lý lỗi.</p>
+</section>
+<section class="adv-block">
+  <h4>Dùng mức độ tự tin để chia việc, không để xóa</h4>
+  <p>Phát hiện có độ tự tin cao có thể đăng tự động. Độ tự tin trung bình thì chuyển cho người xem lại. Độ tự tin thấp thì ghi lại để cải thiện tiêu chí sau này. Mức độ tự tin chỉ đáng tin sau khi đã được đối chiếu với kết quả thực tế (xem mục 5-5).</p>
+</section>`,
     traps: [
       {
-        title: "Extended thinking để tự review",
+        title: "Bật suy nghĩ mở rộng để tự review",
         level: "hard",
-        scenario: "Code sinh tự động hay có race condition. Đề xuất: bật extended thinking với ngân sách lớn và yêu cầu chính phiên đó “suy nghĩ kỹ và tự review”.",
-        bait: "Suy nghĩ lâu hơn = review tốt hơn.",
-        why: "Vẫn là cùng ngữ cảnh, cùng giả định đã dẫn tới lỗi.",
-        fix: ["Reviewer là instance riêng, không có ngữ cảnh sinh.", "Thêm reviewer chuyên về đồng thời với tiêu chí cụ thể."],
+        scenario: "Code do Claude viết hay có lỗi khi nhiều yêu cầu chạy cùng lúc (race condition). Có người đề xuất bật chế độ suy nghĩ mở rộng thật lâu và yêu cầu chính phiên đó “suy nghĩ kỹ rồi tự review”.",
+        bait: "Nghĩ rằng suy nghĩ lâu hơn thì review tốt hơn.",
+        why: "Vẫn là cùng ngữ cảnh, cùng những giả định đã dẫn tới lỗi.",
+        fix: ["Dùng một phiên riêng, không mang ngữ cảnh lúc viết code, để review.", "Thêm một phiên review chuyên về xử lý đồng thời, với tiêu chí cụ thể."],
       },
       {
         title: "Một lượt review khổng lồ",
-        scenario: "PR 40 file gửi trong một request. Review chi tiết 6 file đầu, các file cuối chỉ một dòng “trông ổn”.",
-        bait: "Dùng model có context lớn hơn.",
-        why: "Vấn đề là chú ý bị loãng, không phải không đủ chỗ.",
-        fix: ["Per-file pass song song.", "Integration pass với tóm tắt giao diện để bắt lỗi xuyên file."],
+        scenario: "Pull request 40 file được gửi trong một lần gọi. Sáu file đầu được nhận xét kỹ, những file cuối chỉ có một dòng “trông ổn”.",
+        bait: "Dùng model có ngữ cảnh lớn hơn.",
+        why: "Vấn đề là sự chú ý bị dàn mỏng, không phải thiếu chỗ chứa.",
+        fix: ["Review từng file riêng, chạy song song.", "Thêm một lượt xem liên kết giữa các file, dựa trên bản tóm tắt của từng file."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Sau khi tách per-file review, bot bắt được nhiều lỗi cục bộ hơn nhưng bỏ sót lỗi do hai module hiểu khác nhau về định dạng dữ liệu. Bổ sung tốt nhất?",
-        options: ["Gộp lại thành một lượt review toàn PR", "Thêm lượt tích hợp nhận tóm tắt giao diện/giả định của từng file để tìm vấn đề xuyên module", "Tăng độ dài prompt per-file", "Cho mỗi reviewer per-file đọc thêm toàn bộ repo"],
+        q: "Sau khi chuyển sang review từng file riêng, bot tìm được nhiều lỗi trong từng file hơn, nhưng bỏ sót lỗi do hai module hiểu khác nhau về định dạng dữ liệu. Nên bổ sung gì?",
+        options: ["Quay lại review cả pull request trong một lượt", "Thêm một lượt xem liên kết, đọc bản tóm tắt phần giao tiếp và giả định của từng file để tìm vấn đề giữa các module", "Viết hướng dẫn review từng file dài hơn", "Cho mỗi phiên review từng file đọc thêm toàn bộ repo"],
         answer: 1,
-        explain: "Lỗi xuyên file cần một lượt nhìn toàn cục — nhưng với đầu vào cô đọng để không loãng chú ý.",
-        notes: ["Quay lại vấn đề chú ý loãng.", "Đúng.", "Không cho reviewer thấy file kia.", "Làm phình ngữ cảnh mỗi reviewer, mất lợi ích tập trung."],
+        explain: "Lỗi giữa các file cần một lượt nhìn tổng thể, nhưng đầu vào phải gọn để sự chú ý không bị dàn mỏng.",
+        notes: ["Quay lại vấn đề chú ý bị dàn mỏng.", "Đúng.", "Phiên review vẫn không nhìn thấy file kia.", "Làm phình ngữ cảnh của mỗi phiên, mất lợi ích tập trung."],
       },
     ],
   },

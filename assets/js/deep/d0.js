@@ -2,83 +2,82 @@
 window.DEEP_ADD({
   "0-1": {
     advanced: `
-<h4>🧭 Quy trình 4 bước giải một câu kịch bản</h4>
-<div class="dg dg-anim">
-  <div class="dn"><span class="i">📖</span><b>1. Kịch bản</b>Hệ thống gì? Ai dùng? Đang hỏng ở đâu?</div><span class="da">→</span>
-  <div class="dn"><span class="i">⚖️</span><b>2. Ràng buộc</b>Tin cậy · chi phí · độ trễ · bảo mật · ai đang chờ?</div><span class="da">→</span>
-  <div class="dn"><span class="i">✂️</span><b>3. Loại trừ</b>Quá tay · chỉ dặn prompt khi cần đảm bảo · sai tầng</div><span class="da">→</span>
-  <div class="dn hot"><span class="i">🎯</span><b>4. Chọn</b>Giải pháp tối giản, đúng tầng, deterministic khi cần</div>
-</div>
-<h4>🧪 Giải phẫu một phương án gây nhiễu</h4>
-<table class="t">
-  <tr><th>Kiểu nhiễu</th><th>Dấu hiệu</th><th>Ví dụ</th></tr>
-  <tr><td>Quá tay</td><td>Thêm hạ tầng/model mới cho lỗi cấu hình</td><td>“Fine-tune model”, “thêm classifier định tuyến” khi chỉ cần sửa description công cụ</td></tr>
-  <tr><td>Sai tầng</td><td>Sửa ở chỗ không gây ra lỗi</td><td>Đổ lỗi cho subagent khi coordinator phân rã thiếu</td></tr>
-  <tr><td>Xác suất thay vì đảm bảo</td><td>“Viết hoa”, “nhấn mạnh trong prompt” cho yêu cầu tuyệt đối</td><td>Dặn “luôn xác minh” thay vì cổng kiểm tra bằng code</td></tr>
-  <tr><td>Đúng nhưng vi phạm ràng buộc</td><td>Giải pháp tốt ở bối cảnh khác</td><td>Batch API (rẻ) khi developer đang chờ kết quả</td></tr>
-  <tr><td>Che triệu chứng</td><td>Tăng giới hạn, tăng retry, tăng context</td><td>Tăng context window khi vấn đề là tóm tắt làm mất dữ kiện</td></tr>
-</table>
-<h4>⏱️ Quản lý thời gian</h4>
-<ul>
-  <li>120 phút / 60 câu = 2 phút/câu. Đọc lướt đáp án <em>trước</em> khi đọc kỹ kịch bản giúp biết cần tìm thông tin gì.</li>
-  <li>Đánh dấu câu phân vân, đi tiếp; quay lại sau. Không bỏ trống vì không trừ điểm.</li>
-  <li>Hai đáp án “đều đúng”: chọn cái giải quyết <b>nguyên nhân gốc</b> ở <b>tầng thấp nhất, rẻ nhất</b> mà vẫn đủ độ tin cậy.</li>
-</ul>`,
+<section class="adv-block">
+  <h4>Cách giải một câu hỏi tình huống</h4>
+  <p>Hãy làm theo bốn bước, đừng nhảy ngay vào đọc đáp án:</p>
+  <ol class="steps-dg">
+    <li><b>Hiểu tình huống.</b> Đây là hệ thống gì, ai đang dùng, và đang hỏng ở đâu?</li>
+    <li><b>Tìm ràng buộc.</b> Đề cần chắc chắn tuyệt đối, cần rẻ, cần nhanh hay cần an toàn? Có ai đang ngồi chờ kết quả không?</li>
+    <li><b>Loại đáp án.</b> Gạch bỏ những cách vi phạm ràng buộc, những cách sửa sai chỗ, và những cách làm quá tay.</li>
+    <li class="hot"><b>Chọn đáp án.</b> Trong các đáp án còn lại, chọn cách sửa đúng nguyên nhân gốc, đủ tin cậy và gọn nhất.</li>
+  </ol>
+</section>
+<section class="adv-block">
+  <h4>Bốn kiểu đáp án sai hay gặp</h4>
+  <p><b>Làm quá tay.</b> Đề hỏi một lỗi có thể sửa bằng cấu hình, nhưng đáp án đề xuất fine-tune model hoặc dựng thêm một hệ thống định tuyến.</p>
+  <p><b>Sửa sai chỗ.</b> Báo cáo thiếu nội dung vì agent điều phối chia việc thiếu, nhưng đáp án lại đi sửa agent con.</p>
+  <p><b>Chỉ dặn khi cần chắc chắn.</b> Quy tắc liên quan tới tiền bạc mà đáp án chỉ “nhấn mạnh trong prompt”, trong khi cần chặn bằng code.</p>
+  <p><b>Đúng nhưng không hợp hoàn cảnh.</b> Batch API rẻ thật, nhưng sai khi đề nói lập trình viên đang ngồi chờ kết quả.</p>
+</section>
+<section class="adv-block">
+  <h4>Phân bổ thời gian</h4>
+  <p>Bạn có trung bình 2 phút cho mỗi câu. Câu nào phân vân quá một phút rưỡi thì chọn tạm một đáp án, đánh dấu, rồi đi tiếp; cuối giờ quay lại xem. Vì sai không bị trừ điểm nên đừng để trống câu nào.</p>
+</section>`,
     traps: [
       {
         title: "Hai đáp án đều chạy được",
-        scenario: "Câu hỏi: agent hỗ trợ đôi khi hoàn tiền vượt hạn mức $500. Đáp án B: “Thêm vào system prompt: TUYỆT ĐỐI không hoàn quá $500”. Đáp án C: “Hook PreToolUse chặn process_refund khi amount > 500 và chuyển escalate”.",
-        bait: "Chọn B vì đơn giản, rẻ, không cần code.",
-        why: "Cả hai đều giảm lỗi, nhưng yêu cầu có hệ quả tài chính cần <b>đảm bảo</b>. Prompt chỉ nâng xác suất tuân thủ; hook thì không thể bị bỏ qua.",
-        fix: ["Tìm từ khóa tuyệt đối trong đề: “luôn”, “không bao giờ”, “bắt buộc”, “tuân thủ”.", "Có hậu quả tài chính/pháp lý/bảo mật → ưu tiên cơ chế bằng code (hook, gate, permission).", "Prompt chỉ đúng khi đề hỏi về hành vi mềm (giọng văn, định dạng) hoặc là bước sửa rẻ nhất cho lỗi chọn công cụ."],
+        scenario: "Agent hỗ trợ thỉnh thoảng hoàn tiền vượt hạn mức $500. Đáp án B: thêm vào system prompt câu “TUYỆT ĐỐI không hoàn quá $500”. Đáp án C: dùng hook PreToolUse chặn lệnh hoàn tiền khi số tiền lớn hơn 500 và chuyển sang quy trình duyệt.",
+        bait: "Chọn B vì đơn giản, rẻ và không phải viết code.",
+        why: "Cả hai cách đều làm giảm lỗi, nhưng quy tắc này liên quan tới tiền nên cần chắc chắn 100%. Dặn trong prompt chỉ làm tăng khả năng model làm đúng; hook thì luôn chạy và model không thể bỏ qua.",
+        fix: ["Để ý các từ tuyệt đối trong đề như “luôn”, “không bao giờ”, “bắt buộc”.", "Nếu sai sót gây hậu quả về tiền, pháp lý hoặc bảo mật, ưu tiên cách chặn bằng code (hook, kiểm tra trong công cụ, phân quyền).", "Chỉ chọn cách dặn trong prompt khi yêu cầu mang tính mềm, như giọng văn hay cách trình bày."],
       },
       {
-        title: "Đáp án “mạnh nhất” chưa chắc là đúng",
-        scenario: "Agent chọn nhầm giữa hai công cụ có mô tả gần giống nhau. Các đáp án: fine-tune model trên log; thêm model phân loại định tuyến; viết lại mô tả hai công cụ; gộp hai công cụ.",
-        bait: "Fine-tune hoặc classifier nghe chuyên nghiệp và “mạnh”.",
-        why: "Đề thường hỏi bước <b>đầu tiên / hiệu quả nhất</b>. Nguyên nhân gốc là mô tả mơ hồ — sửa trực tiếp ở đó rẻ và đủ. Hạ tầng thêm vào là quá tay.",
-        fix: ["Xác định nguyên nhân gốc trước.", "Chọn thay đổi nhỏ nhất xử lý đúng nguyên nhân đó.", "Chỉ chọn giải pháp nặng khi đề nói rõ cách nhẹ đã thử và thất bại."],
+        title: "Đáp án “mạnh” nhất chưa chắc đã đúng",
+        scenario: "Agent hay chọn nhầm giữa hai công cụ có mô tả gần giống nhau. Bốn đáp án: fine-tune model trên dữ liệu cũ; thêm một model phân loại để định tuyến; viết lại mô tả của hai công cụ; gộp hai công cụ làm một.",
+        bait: "Chọn fine-tune hoặc model phân loại vì nghe chuyên nghiệp và “mạnh tay”.",
+        why: "Đề hỏi bước nên làm đầu tiên. Nguyên nhân là mô tả công cụ mơ hồ, nên sửa trực tiếp ở đó là rẻ nhất và đủ hiệu quả. Thêm hệ thống mới là làm quá tay.",
+        fix: ["Xác định nguyên nhân gốc trước khi đọc đáp án.", "Chọn thay đổi nhỏ nhất mà vẫn xử lý được nguyên nhân đó.", "Chỉ chọn giải pháp nặng khi đề nói rõ cách nhẹ đã được thử và thất bại."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Đề: pipeline review chạy mỗi PR, developer phải chờ kết quả mới được merge; công ty muốn giảm chi phí 40%. Phương án nào phù hợp nhất?",
-        options: ["Chuyển toàn bộ sang Message Batches API", "Giữ gọi đồng bộ, giảm token: cắt diff về file liên quan, prompt caching cho phần tiêu chí cố định", "Chạy review mỗi tuần một lần", "Bỏ bước review cho PR nhỏ hơn 50 dòng"],
+        q: "Pipeline review chạy trên mỗi pull request, và lập trình viên phải chờ kết quả mới được merge. Công ty muốn giảm 40% chi phí. Phương án nào phù hợp nhất?",
+        options: ["Chuyển toàn bộ sang Message Batches API", "Giữ cách gọi trực tiếp, nhưng giảm lượng dữ liệu gửi đi: chỉ gửi phần thay đổi liên quan và dùng prompt caching cho phần tiêu chí cố định", "Chỉ chạy review mỗi tuần một lần", "Bỏ review cho pull request dưới 50 dòng"],
         answer: 1,
-        explain: "Ràng buộc “developer đang chờ” loại Batch API. Giảm token đầu vào và cache phần tĩnh giảm chi phí mà không đổi độ trễ.",
-        notes: ["Rẻ ~50% nhưng có thể mất tới 24 giờ — vi phạm ràng buộc đang chờ merge.", "Đúng: tối ưu trong khuôn khổ đồng bộ.", "Phá mục đích kiểm tra trước merge.", "Giảm chất lượng/độ an toàn, không phải tối ưu chi phí kỹ thuật."],
-        trap: "Thấy “giảm chi phí” là nghĩ ngay tới Batch API mà quên đọc ràng buộc độ trễ.",
+        explain: "Vì lập trình viên đang chờ, Batch API (có thể mất tới 24 giờ) bị loại. Giảm lượng dữ liệu gửi đi và lưu đệm phần lặp lại giúp tiết kiệm mà không làm chậm.",
+        notes: ["Rẻ hơn khoảng một nửa, nhưng có thể mất tới 24 giờ, trong khi lập trình viên đang chờ để merge.", "Đúng. Giảm chi phí mà vẫn giữ được tốc độ.", "Làm mất ý nghĩa của việc kiểm tra trước khi merge.", "Đây là cắt bớt chất lượng, không phải tối ưu chi phí."],
+        trap: "Thấy “giảm chi phí” là nghĩ ngay tới Batch API mà quên đọc điều kiện “phải chờ kết quả”.",
       },
     ],
   },
   "0-2": {
     advanced: `
-<h4>🗺️ Kịch bản thi ↔ chương cần nắm</h4>
-<table class="t">
-  <tr><th>Kịch bản</th><th>Chương chính</th><th>Câu hỏi hay gặp</th></tr>
-  <tr><td>🎧 Agent hỗ trợ khách hàng</td><td>1, 2, 5</td><td>stop_reason, cổng kiểm tra, hook, lỗi có cấu trúc, escalate, case facts</td></tr>
-  <tr><td>🧑‍💻 Sinh code với Claude Code</td><td>3, 2</td><td>CLAUDE.md, rules, skill, plan mode, Edit/Grep/Glob</td></tr>
-  <tr><td>🔬 Nghiên cứu đa agent</td><td>1, 5</td><td>Coordinator, Task, song song, lan truyền lỗi, provenance</td></tr>
-  <tr><td>🧰 Công cụ cho developer</td><td>2</td><td>.mcp.json, scope, biến môi trường, resources</td></tr>
-  <tr><td>🏃 Claude Code trong CI/CD</td><td>3, 4</td><td>-p, output JSON, reviewer độc lập, Batch vs đồng bộ</td></tr>
-  <tr><td>📄 Trích xuất dữ liệu</td><td>4, 5</td><td>tool_use + schema, nullable, retry, Batch, lấy mẫu phân tầng</td></tr>
-</table>
-<h4>🛠️ Bài thực hành nên tự làm (mỗi bài 30–60 phút)</h4>
-<ol>
-  <li>Viết vòng lặp agent 40 dòng với 2 công cụ giả; in ra <code>stop_reason</code> và <code>usage</code> mỗi lượt.</li>
-  <li>Cố tình làm một công cụ lỗi: trả <code>is_error</code> và quan sát Claude phục hồi.</li>
-  <li>Tạo repo nhỏ có CLAUDE.md, <code>.claude/rules/testing.md</code> với <code>paths</code>, một skill <code>context: fork</code>; dùng <code>/memory</code> kiểm tra.</li>
-  <li>Cấu hình một MCP server qua <code>.mcp.json</code> với <code>\${TOKEN}</code>.</li>
-  <li>Chạy <code>claude -p … --output-format json</code> và đọc từng trường của kết quả.</li>
-</ol>`,
+<section class="adv-block">
+  <h4>Mỗi kịch bản thường hỏi về điều gì</h4>
+  <p><b>Agent chăm sóc khách hàng</b> hay hỏi về vòng lặp agent, cách chặn hành động nguy hiểm bằng code, cách báo lỗi của công cụ, và khi nào chuyển cho nhân viên thật.</p>
+  <p><b>Viết code với Claude Code</b> hay hỏi file cấu hình đặt ở đâu (CLAUDE.md, rules, skill), khi nào dùng plan mode, và chọn công cụ Grep, Glob hay Edit.</p>
+  <p><b>Hệ thống nghiên cứu nhiều agent</b> hay hỏi về cách chia việc, cách truyền thông tin cho agent con, chạy song song, xử lý khi một nguồn bị lỗi và giữ trích dẫn nguồn.</p>
+  <p><b>Claude Code trong CI/CD</b> hay hỏi về cờ <code>-p</code>, kết quả dạng JSON và review độc lập. <b>Trích xuất dữ liệu</b> hay hỏi về JSON schema, thử lại khi lỗi, Batch API và kiểm tra chất lượng.</p>
+</section>
+<section class="adv-block">
+  <h4>Năm bài tự thực hành nên làm</h4>
+  <p>Đọc hiểu là chưa đủ; tự tay làm sẽ giúp bạn nhớ lâu hơn nhiều. Mỗi bài mất khoảng 30 đến 60 phút:</p>
+  <ol class="steps-dg">
+    <li>Viết một vòng lặp agent ngắn với hai công cụ giả, và in ra <code>stop_reason</code> sau mỗi lượt.</li>
+    <li>Cố ý cho một công cụ báo lỗi, rồi quan sát Claude xử lý tiếp như thế nào.</li>
+    <li>Tạo một repo nhỏ có CLAUDE.md và một file rule có <code>paths</code>. Dùng lệnh <code>/memory</code> để xem file nào được nạp.</li>
+    <li>Kết nối một máy chủ MCP qua <code>.mcp.json</code>, lấy token từ biến môi trường.</li>
+    <li>Chạy <code>claude -p "..." --output-format json</code> và đọc từng trường trong kết quả.</li>
+  </ol>
+</section>`,
     traps: [
       {
-        title: "Học thuộc tên cờ, không hiểu cơ chế",
-        scenario: "Bạn nhớ “-p là chế độ không tương tác” nhưng gặp câu: job CI có -p vẫn bị kẹt ở bước Claude muốn chạy <code>npm install</code>.",
-        bait: "Chọn đáp án “thêm cờ -p” vì đó là thứ duy nhất bạn nhớ về CI.",
-        why: "Có -p rồi; vấn đề là <b>quyền công cụ</b>: không có ai bấm cho phép, nên lệnh cần quyền bị từ chối/không chạy được.",
-        fix: ["Hiểu cơ chế: headless = không có người trả lời câu hỏi nào (input, quyền).", "Tiền duyệt công cụ cần thiết bằng <code>--allowedTools</code> (hoặc settings), giới hạn phạm vi hẹp nhất.", "Ôn theo câu hỏi “vì sao”, không chỉ “cái gì”."],
+        title: "Thuộc tên lệnh nhưng không hiểu cơ chế",
+        scenario: "Bạn nhớ rằng “cờ -p dùng để chạy không cần người tương tác”. Đề hỏi: job CI đã có -p, nhưng mỗi khi Claude muốn chạy <code>npm test</code> thì không chạy được, và job kết thúc mà không có kết quả test.",
+        bait: "Chọn đáp án “thêm cờ -p”, vì đó là điều duy nhất bạn nhớ về chạy trong CI.",
+        why: "Lệnh đã có -p rồi. Vấn đề nằm ở quyền dùng công cụ: trong CI không có ai bấm “cho phép”, nên những lệnh cần xin phép sẽ không được chạy.",
+        fix: ["Hiểu bản chất: chạy trong CI nghĩa là không có ai trả lời bất kỳ câu hỏi nào, kể cả câu hỏi xin quyền.", "Cho phép trước đúng những lệnh cần thiết bằng <code>--allowedTools</code>, giới hạn càng hẹp càng tốt.", "Khi ôn, luôn tự hỏi “tại sao” chứ không chỉ nhớ “cái gì”."],
       },
     ],
   },

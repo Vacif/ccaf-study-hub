@@ -147,13 +147,13 @@
   }
 
   /* ── Quiz ── */
-  const qBadges = (q) => (q.level === "hard" ? '<span class="q-badge hard">🔥 Khó</span>' : "") + (q.trap ? '<span class="q-badge trap">🪤 Có bẫy</span>' : "");
+  const qBadges = (q) => (q.level === "hard" ? '<span class="q-badge hard">Câu khó</span>' : "") + (q.trap ? '<span class="q-badge trap">Có bẫy</span>' : "");
   // Giải thích sau khi trả lời: lời giải chung, từng phương án (nếu có) và cái bẫy của câu hỏi
   function explainHTML(q, j) {
     const notes = q.notes
       ? `<ul class="notes">${q.notes.map((t, k) => `<li class="${k === q.answer ? "ok" : ""}"><b class="l">${k === q.answer ? "✅" : k === j ? "❌" : "▫️"}</b><b>${LETTERS[k]}.</b> ${esc(t)}</li>`).join("")}</ul>`
       : "";
-    return `${esc(q.explain)}${notes}${q.trap ? `<div class="trapline">🪤 <b>Bẫy:</b> ${esc(q.trap)}</div>` : ""}`;
+    return `${esc(q.explain)}${notes}${q.trap ? `<div class="trapline"><b>Bẫy của câu này:</b> ${esc(q.trap)}</div>` : ""}`;
   }
   function quizHTML(questions, prefix) {
     return questions
@@ -189,14 +189,14 @@
   function trapsHTML(traps) {
     return traps
       .map((t, i) => `<div class="trap-card">
-        <div class="th">🧨 ${esc(t.title)}<span class="lv">${t.level === "hard" ? "🔥🔥 Rất khó" : "🔥 Khó"}</span></div>
+        <div class="th"><small>Tình huống ${i + 1}${t.level === "hard" ? " · khó" : ""}</small>${esc(t.title)}</div>
         <div class="tb"><p class="scen">${t.scenario}</p>
-          <div class="ask">🤔 Bạn sẽ xử lý thế nào? Nghĩ ra câu trả lời của mình trước, rồi mới mở lời giải.</div>
-          <div class="btn-row" style="margin-top:8px"><button class="btn" data-trap="${i}">👀 Xem bẫy & cách xử lý</button></div>
+          <p class="ask">Bạn sẽ xử lý thế nào? Hãy tự nghĩ câu trả lời trước khi mở lời giải.</p>
+          <button class="btn" data-trap="${i}">Xem lời giải</button>
           <div class="trap-reveal" hidden>
-            <div class="bait"><b>🪤 Phản xạ sai thường gặp:</b> ${t.bait}</div>
-            <div class="why"><b>❓ Vì sao sai:</b> ${t.why}</div>
-            <div class="fix"><b>✅ Cách xử lý đúng:</b><ol>${t.fix.map((f) => `<li>${f}</li>`).join("")}</ol>${t.code ? `<pre><code>${esc(t.code)}</code></pre>` : ""}</div>
+            <div class="bait"><span class="lbl">Cách làm dễ sai</span>${t.bait}</div>
+            <div class="why"><span class="lbl">Vì sao không ổn</span>${t.why}</div>
+            <div class="fix"><span class="lbl">Nên làm thế nào</span><ol>${t.fix.map((f) => `<li>${f}</li>`).join("")}</ol>${t.code ? `<pre><code>${esc(t.code)}</code></pre>` : ""}</div>
           </div></div></div>`)
       .join("");
   }
@@ -204,7 +204,7 @@
     root.querySelectorAll("[data-trap]").forEach((b) => (b.onclick = () => {
       const r = b.closest(".tb").querySelector(".trap-reveal");
       r.hidden = !r.hidden;
-      b.textContent = r.hidden ? "👀 Xem bẫy & cách xử lý" : "🙈 Ẩn lời giải";
+      b.textContent = r.hidden ? "Xem lời giải" : "Ẩn lời giải";
     }));
   }
 
@@ -219,28 +219,27 @@
     const quiz = s.quiz || [];
     const hard = quiz.filter((q) => q.level === "hard").length;
     const toc = [
-      ["basic", "📘 Cơ bản"],
-      widgets.length && ["sim", `🧪 Mô phỏng (${widgets.length})`],
-      s.advanced && ["adv", "🔬 Nâng cao"],
-      ["keys", "📌 Ghi nhớ"],
-      (s.traps || []).length && ["trap", `🧨 Tình huống khó (${s.traps.length})`],
-      quiz.length && ["quiz", `✍️ Quiz (${quiz.length}${hard ? `, ${hard} khó` : ""})`],
+      ["basic", "Cơ bản"],
+      widgets.length && ["sim", "Mô phỏng"],
+      s.advanced && ["adv", "Hiểu sâu"],
+      (s.traps || []).length && ["trap", "Tình huống khó"],
+      quiz.length && ["quiz", `Kiểm tra (${quiz.length} câu${hard ? `, ${hard} câu khó` : ""})`],
     ].filter(Boolean);
-    const head = (key, badge, cls, title) => `<div class="lvl-head" id="sec-${key}"><span class="lvl-badge ${cls}">${badge}</span><h2>${title}</h2></div>`;
+    const head = (key, title, sub, first) => `<div class="lvl-head${first ? " first" : ""}" id="sec-${key}"><h2>${title}</h2>${sub ? `<p>${sub}</p>` : ""}</div>`;
     app.innerHTML = `
       <div class="breadcrumb"><a href="#/">Trang chủ</a> / <a href="#/chapter/${ch.id}">Chương ${ch.num}: ${esc(ch.short)}</a> / Mục ${s.id}</div>
       <div class="section-head"><span class="chip-num" style="background:${colorOf(ch)}">${ch.num}</span><span class="tag">Mục ${s.id}</span></div>
       <h1>${esc(s.title)}</h1>
       <div class="lesson-toc">${toc.map(([k, l]) => `<button data-go="${k}">${l}</button>`).join("")}</div>
-      ${head("basic", "Cơ bản", "basic", "📘 Kiến thức cơ bản")}
+      ${head("basic", "Kiến thức cơ bản", "", true)}
       <div class="body">${s.body}</div>
-      ${widgets.length ? head("sim", "Mô phỏng", "sim", "🧪 Mô phỏng trực quan") : ""}
-      ${widgets.map((w, k) => `<div class="widget"><div class="widget-head">🧪 ${esc(w.title)}</div><div class="widget-body" data-w="${k}"></div></div>`).join("")}
-      ${s.advanced ? `${head("adv", "Nâng cao", "adv", "🔬 Hiểu sâu — kiến thức nâng cao")}<div class="advanced body">${s.advanced}</div>` : ""}
-      <div class="keypoints" id="sec-keys"><h4>📌 Ghi nhớ</h4><ul>${(s.keyPoints || []).map((k) => `<li>${esc(k)}</li>`).join("")}</ul></div>
-      ${s.tip ? `<div class="tip"><b>💡 Mẹo thi:</b> ${esc(s.tip)}</div>` : ""}
-      ${(s.traps || []).length ? `${head("trap", "Thực chiến", "trap", "🧨 Tình huống khó, bẫy & cách xử lý")}<div id="traps">${trapsHTML(s.traps)}</div>` : ""}
-      ${quiz.length ? `${head("quiz", "Kiểm tra", "basic", "✍️ Kiểm tra nhanh")}<div id="quiz">${quizHTML(quiz, s.id)}</div>` : ""}
+      <div class="keypoints"><h4>Tóm lại, cần nhớ</h4><ul>${(s.keyPoints || []).map((k) => `<li>${esc(k)}</li>`).join("")}</ul></div>
+      ${s.tip ? `<div class="tip"><b>Mẹo khi đi thi:</b> ${esc(s.tip)}</div>` : ""}
+      ${widgets.length ? head("sim", "Mô phỏng", "Xem dữ liệu đi qua hệ thống từng bước. Có thể đổi tình huống để thấy kết quả khác nhau.") : ""}
+      ${widgets.map((w, k) => `<div class="widget"><div class="widget-head">${esc(w.title)}</div><div class="widget-body" data-w="${k}"></div></div>`).join("")}
+      ${s.advanced ? `${head("adv", "Hiểu sâu hơn", "Đọc khi đã nắm phần cơ bản. Phần này giải thích cơ chế bên dưới và các chi tiết hay bị hỏi xoáy.")}<div class="body">${s.advanced}</div>` : ""}
+      ${(s.traps || []).length ? `${head("trap", "Tình huống khó", "Những tình huống thực tế dễ làm sai. Hãy tự nghĩ cách xử lý trước, rồi mới mở lời giải.")}<div id="traps">${trapsHTML(s.traps)}</div>` : ""}
+      ${quiz.length ? `${head("quiz", "Kiểm tra nhanh", "Chọn một đáp án để xem giải thích cho từng phương án.")}<div id="quiz">${quizHTML(quiz, s.id)}</div>` : ""}
       <div style="margin-top:20px"><button class="btn ${state.done[s.id] ? "ok" : "primary"}" id="doneBtn">${state.done[s.id] ? "✓ Đã hoàn thành" : "Đánh dấu hoàn thành"}</button></div>
       <div class="pager">
         ${prev ? `<a class="btn" href="#/section/${prev.id}">← ${prev.id} ${esc(prev.title)}</a>` : "<span></span>"}

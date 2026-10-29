@@ -308,14 +308,14 @@ tool_use Task(agent="search", prompt="...điện ảnh...")
   };
 
   W.refinement = {
-    title: "Mô phỏng tinh chỉnh lặp",
+    title: "Tinh chỉnh dần qua ví dụ và test",
     render: stepper([
-      { role: "user", who: "Bạn", text: "Chuẩn hóa địa chỉ về định dạng chuẩn của công ty." },
-      { role: "err", who: "Claude (lần 1)", text: "“12 nguyen trai q1” → “12 Nguyen Trai Street, District 1” ✗ (sai định dạng mong muốn)" },
-      { role: "user", who: "Bạn — thêm ví dụ cụ thể", html: "<code>12 nguyen trai q1</code> → <code>12 Nguyễn Trãi, P. Bến Thành, Q.1, TP.HCM</code><br><code>5 le loi, quan 1</code> → <code>5 Lê Lợi, P. Bến Nghé, Q.1, TP.HCM</code>" },
-      { role: "assistant", who: "Claude (lần 2)", text: "Đã hiểu mẫu: viết hoa có dấu, viết tắt P./Q., thêm TP. Áp dụng cho 200 địa chỉ còn lại." },
-      { role: "user", who: "Bạn — chạy test", text: "3/50 test thất bại: địa chỉ không có số nhà." },
-      { role: "tool", who: "Claude (lần 3)", text: "Bổ sung xử lý thiếu số nhà → 50/50 test pass ✓" },
+      { role: "user", who: "Bạn", text: "Hãy chuẩn hóa các địa chỉ theo định dạng chuẩn của công ty." },
+      { role: "err", who: "Claude, lần 1", text: "Claude đổi “12 nguyen trai q1” thành “12 Nguyen Trai Street, District 1”. Kết quả sai ý, vì lời mô tả không nói rõ định dạng mong muốn trông ra sao." },
+      { role: "user", who: "Bạn, lần này đưa ví dụ cụ thể", html: "Bạn đưa hai cặp ví dụ trước và sau:<br><code>12 nguyen trai q1</code> thành <code>12 Nguyễn Trãi, P. Bến Thành, Q.1, TP.HCM</code><br><code>5 le loi, quan 1</code> thành <code>5 Lê Lợi, P. Bến Nghé, Q.1, TP.HCM</code>" },
+      { role: "assistant", who: "Claude, lần 2", text: "Nhìn ví dụ, Claude hiểu ngay quy tắc: viết hoa có dấu, viết tắt P. và Q., thêm TP. ở cuối. Nó áp dụng cho 200 địa chỉ còn lại." },
+      { role: "user", who: "Bạn chạy test", text: "Bạn chạy bộ test và gửi kết quả: 3 trên 50 test thất bại, đều là những địa chỉ không có số nhà." },
+      { role: "tool", who: "Claude, lần 3", text: "Nhờ thông báo lỗi cụ thể của test, Claude bổ sung cách xử lý địa chỉ không có số nhà. Cả 50 test đều đạt." },
     ]),
   };
 
@@ -427,7 +427,9 @@ Ví dụ 3: "Muốn đổi gói cước" → billing</code></pre><div class="msg
             <circle cx="${20 + pos * 520}" cy="${20 + 0.65 * Math.sin(Math.PI * pos) * 90}" r="8" fill="${att > 0.7 ? "var(--ok)" : "var(--bad)"}"/>
             <text x="20" y="135" style="font-size:12px">Đầu</text><text x="280" y="135" text-anchor="middle" style="font-size:12px">Giữa (dễ bị bỏ sót)</text><text x="540" y="135" text-anchor="end" style="font-size:12px">Cuối</text>
             <text x="20" y="14" style="font-size:11px;fill:var(--muted)">↑ mức chú ý cao</text></svg>
-          <div class="msg ${f && att > 0.7 ? "tool" : "system"}"><span class="who">Đánh giá</span>${f ? "✓ Số tiền, ngày, mã đơn được giữ nguyên văn trong case facts." : "✗ Dữ kiện giao dịch có thể bị tóm tắt làm mất."} ${att > 0.7 ? "✓ Phát hiện quan trọng ở vị trí được chú ý tốt." : "✗ Phát hiện nằm giữa input — rủi ro “lost in the middle”."} ${t ? "✓ Output công cụ chỉ giữ trường liên quan." : "✗ Output công cụ 40+ trường chiếm phần lớn ngữ cảnh."}</div>`;
+          <div class="callout ${f ? "info" : "danger"}">${f ? "<b>Ổn.</b> Số tiền, ngày và mã đơn được giữ nguyên văn trong khối case facts." : "<b>Có rủi ro.</b> Không có khối case facts, nên các con số giao dịch có thể bị mất khi hội thoại được tóm tắt."}</div>
+          <div class="callout ${att > 0.7 ? "info" : "danger"}">${att > 0.7 ? "<b>Ổn.</b> Thông tin quan trọng nằm ở vị trí model chú ý tốt." : "<b>Có rủi ro.</b> Thông tin quan trọng nằm ở giữa nội dung dài, chỗ model dễ bỏ sót nhất."}</div>
+          <div class="callout ${t ? "info" : "danger"}">${t ? "<b>Ổn.</b> Kết quả công cụ chỉ giữ những trường cần thiết." : "<b>Có rủi ro.</b> Kết quả công cụ có hơn 40 trường, chiếm phần lớn ngữ cảnh."}</div>`;
       };
       el.querySelectorAll("input,select").forEach((i) => (i.onchange = run));
       run();
