@@ -52,7 +52,8 @@ Mỗi phát hiện phải trích nguyên văn dòng code liên quan.</code></pre
       {
         level: "hard",
         q: "Bot review có ba nhóm phát hiện: bảo mật (báo nhầm 5%), hiệu năng (báo nhầm 10%), comment lỗi thời (báo nhầm 60%). Lập trình viên bắt đầu phớt lờ bot. Nên làm gì trước tiên?",
-        options: ["Thêm câu “hãy thận trọng” vào hướng dẫn chung", "Tạm tắt nhóm comment lỗi thời và viết lại tiêu chí cụ thể cho nhóm này (ví dụ chỉ báo khi comment mô tả sai hành vi thật của code) trước khi bật lại", "Tắt toàn bộ bot", "Thêm ví dụ cho nhóm bảo mật"],
+        options: ["Thêm câu “hãy thận trọng, chỉ báo khi chắc chắn” vào hướng dẫn", "Tạm tắt nhóm comment lỗi thời, viết lại tiêu chí cụ thể rồi mới bật lại", "Tắt toàn bộ bot cho tới khi tỷ lệ báo nhầm giảm", "Thêm ví dụ cho nhóm bảo mật vì đây là nhóm quan trọng nhất, rồi theo dõi thêm một thời gian"],
+        en: { q: "A review bot has three finding categories: security (5% false positives), performance (10%), stale comments (60%). Developers are starting to ignore the bot. What should you do first?", options: ["Add “be careful, only report when certain” to the general instructions", "Pause the stale-comment category, rewrite its criteria concretely, then re-enable it", "Turn off the entire bot until false positives drop", "Add examples to the security category since it matters most, then keep monitoring"] },
         answer: 1,
         explain: "Xử lý đúng nguồn gây nhiễu, giữ lại những nhóm đang hoạt động tốt, và lấy lại niềm tin của người dùng.",
         notes: ["Chung chung, không nhắm vào nhóm đang gây nhiễu.", "Đúng.", "Mất luôn nhóm bảo mật đang hoạt động tốt.", "Nhóm bảo mật không phải là vấn đề."],
@@ -104,7 +105,8 @@ Mỗi phát hiện phải trích nguyên văn dòng code liên quan.</code></pre
       {
         level: "hard",
         q: "Model phân loại tốt những trường hợp rõ ràng, nhưng dao động ở những trường hợp nằm giữa hai nhóm. Bạn chỉ có chỗ cho bốn ví dụ. Nên chọn ví dụ nào?",
-        options: ["Bốn trường hợp rõ ràng nhất của mỗi nhóm", "Bốn trường hợp nằm ở ranh giới giữa các nhóm, mỗi trường hợp có giải thích vì sao chọn nhóm đó", "Bốn trường hợp lấy ngẫu nhiên từ dữ liệu cũ", "Bốn trường hợp dài nhất"],
+        options: ["Bốn trường hợp rõ ràng, tiêu biểu nhất của mỗi nhóm", "Bốn ca nằm ở ranh giới, mỗi ca giải thích vì sao chọn nhóm đó", "Bốn trường hợp lấy ngẫu nhiên từ dữ liệu cũ cho khách quan", "Bốn trường hợp dài nhất để model thấy nhiều chi tiết"],
+        en: { q: "A model classifies clear cases well but wavers on cases between two categories. You only have room for four examples. Which should you choose?", options: ["The four clearest, most typical cases of each category", "Four borderline cases, each explaining why that category was chosen", "Four cases sampled at random from past data to stay objective", "The four longest cases so the model sees more detail"] },
         answer: 1,
         explain: "Ví dụ có giá trị nhất là ở chỗ model đang làm sai. Phần giải thích giúp model hiểu quy tắc để áp dụng cho trường hợp mới.",
         notes: ["Model vốn đã làm tốt những trường hợp rõ ràng.", "Đúng.", "Phần lớn sẽ là trường hợp dễ.", "Độ dài không liên quan tới ranh giới quyết định."],
@@ -128,6 +130,10 @@ Mỗi phát hiện phải trích nguyên văn dòng code liên quan.</code></pre
   <p><b>Thêm “other” kèm ô mô tả</b> cho danh sách lựa chọn. Nếu không có lối thoát này, một hợp đồng tư vấn pháp lý sẽ bị ép vào nhóm gần nhất, ví dụ “it”.</p>
   <p><b>Thêm ô trích dẫn</b>, ví dụ <code>evidence_quote</code>, để biết giá trị lấy từ câu nào trong tài liệu. Code có thể kiểm tra câu đó có thật trong tài liệu hay không.</p>
   <p><b>Ghi định dạng ngay trong mô tả trường</b>, ví dụ “YYYY-MM-DD”, để mọi ngày tháng đều về cùng một dạng.</p>
+</section>
+<section class="adv-block">
+  <h4>Khi làm thật với model mới nhất</h4>
+  <p>Đề thi mô tả cách lấy JSON bằng một công cụ có schema kèm <code>tool_choice</code> ép gọi công cụ đó. Với các model mới nhất, kiểu ép này bị từ chối; cách nên dùng là structured outputs (<code>output_config.format</code> với JSON schema), cho kết quả là JSON đúng schema ngay trong câu trả lời. Các mẹo thiết kế schema ở trên vẫn áp dụng y nguyên. Bài thực hành chương 4 có code mẫu đầy đủ.</p>
 </section>`,
     traps: [
       {
@@ -150,11 +156,12 @@ Mỗi phát hiện phải trích nguyên văn dòng code liên quan.</code></pre
       {
         level: "hard",
         q: "Trường loại dịch vụ chỉ cho phép hai giá trị [it, marketing]. Một hợp đồng tư vấn pháp lý bị xếp vào \"it\". Sửa schema thế nào là tốt nhất?",
-        options: ["Thêm \"legal\" vào danh sách", "Thêm \"other\" vào danh sách, kèm một trường service_detail (cho phép null) để mô tả", "Bỏ danh sách, cho nhập chữ tự do", "Cho phép trường loại dịch vụ nhận null"],
+        options: ["Thêm \"legal\" vào danh sách giá trị cho phép", "Thêm \"other\" kèm trường service_detail (nullable) để mô tả", "Bỏ danh sách cố định, cho trường loại dịch vụ nhận chữ tự do để ghi đúng loại", "Cho trường loại dịch vụ nhận null khi không khớp"],
+        en: { q: "A service-type field only allows two values: [it, marketing]. A legal consulting contract gets classified as \"it\". What is the best schema fix?", options: ["Add \"legal\" to the allowed values", "Add \"other\" plus a nullable service_detail field to describe it", "Drop the fixed list and let the service-type field accept free text so it is always accurate", "Allow the service-type field to be null when nothing matches"] },
         answer: 1,
         explain: "Danh sách có thể còn mở rộng thì cần một lối thoát “other” kèm mô tả. Cách này vẫn giữ được các giá trị chuẩn để thống kê.",
         notes: ["Chỉ sửa được trường hợp này; loại dịch vụ mới khác vẫn bị ép sai.", "Đúng.", "Mất tính thống nhất, khó thống kê.", "Mất thông tin: loại dịch vụ có tồn tại, chỉ là không nằm trong danh sách."],
-        trap: "Phương án A giải quyết đúng trường hợp trước mắt nên rất hấp dẫn, nhưng không bền.",
+        trap: "Cách “thêm legal vào danh sách” giải quyết đúng trường hợp trước mắt nên rất hấp dẫn, nhưng không bền.",
       },
     ],
   },
@@ -201,7 +208,8 @@ Mỗi phát hiện phải trích nguyên văn dòng code liên quan.</code></pre
       {
         level: "hard",
         q: "Bước kiểm tra báo: ngày hóa đơn \"15/03/2026\" sai định dạng, và ô mã số thuế bị trống. Kiểm tra tài liệu gốc thì thấy có ngày, nhưng không hề có mã số thuế. Nên làm gì?",
-        options: ["Thử lại kèm cả hai lỗi", "Thử lại kèm lỗi định dạng ngày; còn mã số thuế thì để null và đánh dấu “không có trong tài liệu”", "Không thử lại, chuyển cả hai cho người kiểm tra", "Thử lại năm lần mà không kèm mô tả lỗi"],
+        options: ["Thử lại, kèm mô tả cả hai lỗi cho model sửa", "Thử lại kèm lỗi ngày; mã số thuế để null, ghi “không có trong tài liệu”", "Không thử lại, chuyển ngay cả hai lỗi cho người kiểm tra vì tài liệu đã có vấn đề", "Thử lại năm lần liên tiếp mà không cần kèm mô tả lỗi"],
+        en: { q: "Validation reports: the invoice date \"15/03/2026\" has the wrong format, and the tax ID field is empty. The source document has the date, but no tax ID at all. What should you do?", options: ["Retry, describing both errors for the model to fix", "Retry with the date error only; set tax ID to null, marked “not in document”", "Do not retry; send both errors to a human reviewer right away because the document is problematic", "Retry five times in a row without including any error description"] },
         answer: 1,
         explain: "Tách phần sửa được (định dạng ngày) khỏi phần thông tin không tồn tại (thử lại vô ích và dễ dẫn tới bịa).",
         notes: ["Thử lại với trường không có trong tài liệu sẽ khuyến khích model bịa.", "Đúng.", "Bỏ lỡ cơ hội tự sửa một lỗi dễ.", "Thử lại không kèm thông tin, lại còn quá nhiều lần."],
@@ -252,7 +260,8 @@ Mỗi phát hiện phải trích nguyên văn dòng code liên quan.</code></pre
       {
         level: "hard",
         q: "Báo cáo tuân thủ phải có trước 9 giờ sáng thứ Hai. Dữ liệu sẵn sàng lúc 18 giờ thứ Sáu. Kế hoạch dùng Batch API nào hợp lý nhất?",
-        options: ["Gửi batch lúc 8 giờ sáng thứ Hai", "Gửi batch ngay tối thứ Sáu; khi xong thì gửi lại những yêu cầu lỗi theo custom_id, vẫn còn dư thời gian", "Không dùng Batch vì không có cam kết thời gian", "Gửi từng yêu cầu trực tiếp vào sáng thứ Hai"],
+        options: ["Gửi batch lúc 8 giờ sáng thứ Hai để dữ liệu mới nhất", "Gửi ngay tối thứ Sáu; xong thì gửi lại phần lỗi theo custom_id", "Không dùng Batch vì Batch không cam kết thời gian hoàn thành", "Gửi từng yêu cầu trực tiếp vào sáng thứ Hai cho nhanh"],
+        en: { q: "A compliance report must be ready by 9 a.m. Monday. The data is available at 6 p.m. Friday. Which Batch API plan makes the most sense?", options: ["Submit the batch at 8 a.m. Monday so the data is freshest", "Submit Friday evening; when done, resubmit failures by custom_id", "Do not use Batch because it has no completion-time guarantee", "Send each request directly on Monday morning for speed"] },
         answer: 1,
         explain: "Khoảng 63 giờ dư sức cho tối đa 24 giờ xử lý, cộng thêm một vòng gửi lại.",
         notes: ["Chỉ còn 1 giờ, trong khi batch có thể mất tới 24 giờ.", "Đúng.", "Không có cam kết thời gian không có nghĩa là không dùng được; chỉ cần tính giờ gửi hợp lý.", "Chi phí gấp đôi và dồn hết việc vào phút chót."],
@@ -294,7 +303,8 @@ Mỗi phát hiện phải trích nguyên văn dòng code liên quan.</code></pre
       {
         level: "hard",
         q: "Sau khi chuyển sang review từng file riêng, bot tìm được nhiều lỗi trong từng file hơn, nhưng bỏ sót lỗi do hai module hiểu khác nhau về định dạng dữ liệu. Nên bổ sung gì?",
-        options: ["Quay lại review cả pull request trong một lượt", "Thêm một lượt xem liên kết, đọc bản tóm tắt phần giao tiếp và giả định của từng file để tìm vấn đề giữa các module", "Viết hướng dẫn review từng file dài hơn", "Cho mỗi phiên review từng file đọc thêm toàn bộ repo"],
+        options: ["Quay lại review cả pull request trong một lượt duy nhất", "Thêm một lượt xem tóm tắt giao tiếp của các file để tìm lỗi giữa module", "Viết hướng dẫn review từng file dài và chi tiết hơn", "Cho mỗi phiên review từng file đọc thêm toàn bộ repo để hiểu các module khác dùng dữ liệu thế nào"],
+        en: { q: "After switching to per-file reviews, the bot finds more bugs within each file but misses bugs caused by two modules assuming different data formats. What should you add?", options: ["Go back to reviewing the whole pull request in a single pass", "Add a pass over each file's interface summary to find cross-module issues", "Write longer, more detailed per-file review instructions", "Let each per-file review session also read the whole repo to see how other modules use the data"] },
         answer: 1,
         explain: "Lỗi giữa các file cần một lượt nhìn tổng thể, nhưng đầu vào phải gọn để sự chú ý không bị dàn mỏng.",
         notes: ["Quay lại vấn đề chú ý bị dàn mỏng.", "Đúng.", "Phiên review vẫn không nhìn thấy file kia.", "Làm phình ngữ cảnh của mỗi phiên, mất lợi ích tập trung."],

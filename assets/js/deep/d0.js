@@ -43,7 +43,8 @@ window.DEEP_ADD({
       {
         level: "hard",
         q: "Pipeline review chạy trên mỗi pull request, và lập trình viên phải chờ kết quả mới được merge. Công ty muốn giảm 40% chi phí. Phương án nào phù hợp nhất?",
-        options: ["Chuyển toàn bộ sang Message Batches API", "Giữ cách gọi trực tiếp, nhưng giảm lượng dữ liệu gửi đi: chỉ gửi phần thay đổi liên quan và dùng prompt caching cho phần tiêu chí cố định", "Chỉ chạy review mỗi tuần một lần", "Bỏ review cho pull request dưới 50 dòng"],
+        options: ["Chuyển toàn bộ review sang Message Batches API, vì Batch rẻ hơn khoảng 50% so với gọi trực tiếp", "Giữ gọi trực tiếp nhưng chỉ gửi phần diff liên quan, kèm prompt caching cho tiêu chí cố định", "Gom các pull request lại và chạy review theo lịch mỗi tuần một lần để giảm số lần gọi", "Bỏ review với pull request dưới 50 dòng và chỉ review các pull request lớn"],
+        en: { q: "A review pipeline runs on every pull request, and developers must wait for the result before merging. The company wants to cut costs by 40%. Which option fits best?", options: ["Move all reviews to the Message Batches API, since batches cost about 50% less than direct calls", "Keep direct calls but send only the relevant diff, with prompt caching for the fixed review criteria", "Group pull requests and run reviews on a weekly schedule to reduce the number of calls", "Skip review for pull requests under 50 lines and only review the large ones"] },
         answer: 1,
         explain: "Vì lập trình viên đang chờ, Batch API (có thể mất tới 24 giờ) bị loại. Giảm lượng dữ liệu gửi đi và lưu đệm phần lặp lại giúp tiết kiệm mà không làm chậm.",
         notes: ["Rẻ hơn khoảng một nửa, nhưng có thể mất tới 24 giờ, trong khi lập trình viên đang chờ để merge.", "Đúng. Giảm chi phí mà vẫn giữ được tốc độ.", "Làm mất ý nghĩa của việc kiểm tra trước khi merge.", "Đây là cắt bớt chất lượng, không phải tối ưu chi phí."],

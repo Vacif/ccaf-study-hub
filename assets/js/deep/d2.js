@@ -59,10 +59,11 @@ window.DEEP_ADD({
       {
         level: "hard",
         q: "Agent có một công cụ analyze_document dùng cho mọi việc liên quan tới tài liệu. Kết quả lúc thì trích số liệu, lúc thì tóm tắt, lúc thì kiểm chứng, rất thiếu ổn định. Nên cải thiện thế nào?",
-        options: ["Thêm tham số mode vào analyze_document", "Tách thành extract_data_points, summarize_content và verify_claim_against_source, mỗi công cụ có mô tả rõ ràng", "Thêm ví dụ mẫu cho analyze_document", "Tăng temperature"],
+        options: ["Thêm tham số mode (extract/summarize/verify) vào analyze_document", "Tách thành extract_data_points, summarize_content, verify_claim_against_source, mỗi cái có mô tả rõ", "Giữ một công cụ nhưng thêm nhiều ví dụ mẫu cho từng kiểu việc vào mô tả", "Giảm temperature xuống 0 để kết quả của công cụ ổn định hơn"],
+        en: { q: "An agent has a single analyze_document tool used for everything document-related. Results are inconsistent: sometimes it extracts figures, sometimes it summarizes, sometimes it verifies. How should you improve it?", options: ["Add a mode parameter (extract/summarize/verify) to analyze_document", "Split it into extract_data_points, summarize_content and verify_claim_against_source, each clearly described", "Keep one tool but add many examples for each kind of task to its description", "Set temperature to 0 so the tool's results are more stable"] },
         answer: 1,
         explain: "Công cụ làm đủ thứ thì ranh giới mờ. Công cụ chuyên biệt, tên và mô tả rõ ràng giúp Claude chọn đúng việc cần làm.",
-        notes: ["Chỉ chuyển sự mơ hồ sang tham số mode, không giải quyết gốc rễ.", "Đúng.", "Có ích một phần, nhưng vẫn là một công cụ mang nhiều nghĩa.", "Làm kết quả càng ngẫu nhiên hơn, đi ngược mục tiêu."],
+        notes: ["Chỉ chuyển sự mơ hồ sang tham số mode, không giải quyết gốc rễ.", "Đúng.", "Có ích một phần, nhưng vẫn là một công cụ mang nhiều nghĩa.", "Temperature không giải quyết được việc một công cụ mang nhiều nghĩa."],
       },
     ],
   },
@@ -111,7 +112,8 @@ window.DEEP_ADD({
       {
         level: "hard",
         q: "Công cụ process_refund bị hết thời gian chờ khi gọi cổng thanh toán. Cách báo lỗi và xử lý nào an toàn nhất?",
-        options: ["Báo lỗi tạm thời, có thể thử lại, và Claude gọi lại ngay", "Báo lỗi tạm thời kèm thông tin để kiểm tra trạng thái giao dịch; nếu thử lại thì dùng khóa chống trùng để không hoàn tiền hai lần", "Báo thành công vì nhiều khả năng giao dịch đã xong", "Báo lỗi nghiệp vụ, không thử lại"],
+        options: ["Báo lỗi tạm thời, cho phép thử lại, và Claude gọi lại ngay lập tức", "Báo lỗi tạm thời kèm cách kiểm tra giao dịch; thử lại thì dùng khóa chống trùng", "Báo thành công vì phần lớn giao dịch timeout thực ra vẫn hoàn tất", "Báo lỗi nghiệp vụ, không cho thử lại, và yêu cầu khách liên hệ bộ phận thanh toán để kiểm tra sau"],
+        en: { q: "The process_refund tool times out while calling the payment gateway. Which way of reporting and handling the error is safest?", options: ["Report a transient, retryable error and have Claude call again immediately", "Report a transient error with a way to check the transaction; retry only with an idempotency key", "Report success, since most timed-out transactions actually complete", "Report a business error, disallow retries, and ask the customer to contact billing to check later"] },
         answer: 1,
         explain: "Hết thời gian chờ khi thực hiện thao tác ghi là trạng thái chưa rõ ràng. Chỉ nên thử lại khi có khóa chống trùng, hoặc sau khi đã kiểm tra trạng thái.",
         notes: ["Có thể hoàn tiền cho khách hai lần.", "Đúng.", "Có thể báo sai sự thật cho khách.", "Phân loại sai: đây không phải vi phạm quy định."],
@@ -135,6 +137,10 @@ window.DEEP_ADD({
 <section class="adv-block">
   <h4>Phân công cụ theo vai trò</h4>
   <p>Agent tìm kiếm cần công cụ tìm kiếm web và đọc trang. Agent phân tích cần công cụ đọc tài liệu. Agent tổng hợp chỉ cần một công cụ kiểm chứng phạm vi hẹp. Một agent “biết làm mọi thứ” với 18 công cụ sẽ chọn kém chính xác hơn, và dễ làm những việc ngoài vai trò của nó.</p>
+</section>
+<section class="adv-block">
+  <h4>Khi làm thật với model mới nhất</h4>
+  <p>Đề thi dựa trên cách dùng <code>any</code> và chỉ định đích danh để ép gọi công cụ, nên vẫn cần nắm chắc phần trên. Tuy vậy, các model mới nhất (ví dụ Claude Opus 5.5, Sonnet 5.5) trả lỗi khi nhận hai kiểu ép này. Khi triển khai cho khách, hãy dùng <code>auto</code> kèm lời dặn rõ ràng và kiểm tra xem có lệnh gọi công cụ chưa; đặt <code>strict: true</code> trên công cụ để tham số luôn đúng schema; hoặc dùng structured outputs nếu mục đích chỉ là lấy JSON. Xem bài thực hành chương 2 và chương 4.</p>
 </section>`,
     traps: [
       {
@@ -157,10 +163,11 @@ window.DEEP_ADD({
       {
         level: "hard",
         q: "Quy trình phải luôn chạy extract_metadata trước tiên, sau đó Claude tự chọn một trong ba công cụ trích xuất tùy loại tài liệu. Cấu hình tool_choice nào đúng?",
-        options: ["auto cho cả hai lượt", "Lượt 1 chỉ định đích danh extract_metadata; lượt 2 dùng any", "any cho cả hai lượt", "Lượt 1 dùng any; lượt 2 chỉ định đích danh"],
+        options: ["auto cho cả hai lượt, dặn trong prompt gọi extract_metadata trước", "Lượt 1 chỉ định extract_metadata; lượt 2 dùng any", "any cho cả hai lượt, vì any luôn buộc gọi công cụ", "Lượt 1 dùng any; lượt 2 chỉ định đích danh một công cụ"],
+        en: { q: "A workflow must always run extract_metadata first, then let Claude choose one of three extraction tools based on the document type. Which tool_choice configuration is correct?", options: ["auto for both turns, with a prompt telling Claude to call extract_metadata first", "Turn 1 forces extract_metadata by name; turn 2 uses any", "any for both turns, since any always forces a tool call", "Turn 1 uses any; turn 2 forces one specific tool by name"] },
         answer: 1,
         explain: "Chỉ định đích danh đảm bảo đúng bước đầu tiên. any ở lượt sau đảm bảo có JSON mà vẫn để Claude chọn mẫu phù hợp.",
-        notes: ["Không đảm bảo Claude gọi công cụ.", "Đúng.", "Không đảm bảo extract_metadata chạy trước.", "Ngược thứ tự yêu cầu."],
+        notes: ["Lời dặn chỉ là xác suất; auto không đảm bảo Claude gọi công cụ nào.", "Đúng.", "any buộc gọi một công cụ, nhưng không đảm bảo extract_metadata được chọn trước.", "Ngược thứ tự yêu cầu."],
       },
     ],
   },
@@ -210,7 +217,8 @@ window.DEEP_ADD({
       {
         level: "hard",
         q: "Thành viên mới clone repo. Claude Code hỏi có tin tưởng máy chủ trong .mcp.json không; sau khi đồng ý, máy chủ GitHub khởi động thất bại vì thiếu biến môi trường. Cách khắc phục đúng là gì?",
-        options: ["Sửa .mcp.json và dán token của thành viên mới vào", "Thành viên mới đặt biến môi trường GITHUB_TOKEN trên máy của mình rồi khởi động lại", "Chuyển cấu hình sang ~/.claude.json của thành viên mới, ghi thẳng token", "Xóa máy chủ khỏi .mcp.json"],
+        options: ["Sửa .mcp.json và dán token của thành viên mới vào đó", "Thành viên mới đặt biến GITHUB_TOKEN trên máy mình rồi khởi động lại", "Chuyển máy chủ sang ~/.claude.json của thành viên mới, ghi thẳng token", "Xóa máy chủ GitHub khỏi .mcp.json để không còn báo lỗi"],
+        en: { q: "A new team member clones the repo. Claude Code asks whether to trust the servers in .mcp.json; after approving, the GitHub server fails to start because an environment variable is missing. What is the correct fix?", options: ["Edit .mcp.json and paste the new member's token into it", "The new member sets GITHUB_TOKEN on their own machine and restarts", "Move the server into the new member's ~/.claude.json with the token written in", "Remove the GitHub server from .mcp.json so the error goes away"] },
         answer: 1,
         explain: "Cấu hình chung đã đúng; thứ còn thiếu là giá trị bí mật trên máy cá nhân. Hãy sửa ở môi trường của người đó, không sửa repo.",
         notes: ["Làm lộ khóa bí mật vào git.", "Đúng.", "Lệch cấu hình so với cả nhóm, và vẫn ghi thẳng khóa bí mật.", "Cả nhóm mất luôn công cụ."],
@@ -255,10 +263,11 @@ window.DEEP_ADD({
       {
         level: "hard",
         q: "Claude gọi Edit trên file config.ts và nhận lỗi “không tìm thấy đoạn cần thay”, dù 10 phút trước nó vừa đọc file và thấy đúng đoạn đó. Nguyên nhân khả dĩ và cách xử lý?",
-        options: ["Edit lỗi ngẫu nhiên, cứ gọi lại", "File đã bị thay đổi sau lần đọc (do người dùng, công cụ định dạng code, hoặc lệnh khác); đọc lại rồi sửa theo nội dung hiện tại", "Bật replace_all: true", "Chuyển sang dùng Grep"],
+        options: ["Lỗi ngẫu nhiên của công cụ Edit, chỉ cần gọi lại y nguyên", "File đã bị đổi sau lần đọc; đọc lại rồi sửa theo nội dung mới", "Đoạn cần thay xuất hiện nhiều lần; bật replace_all: true", "Edit không xử lý được file .ts; chuyển sang dùng Grep"],
+        en: { q: "Claude calls Edit on config.ts and gets “text to replace not found”, even though it read the file 10 minutes ago and saw that exact text. What is the likely cause and fix?", options: ["A random Edit glitch; just call it again unchanged", "The file changed after it was read; read it again and edit the current content", "The text appears several times; enable replace_all: true", "Edit cannot handle .ts files; switch to Grep"] },
         answer: 1,
         explain: "Edit so khớp với nội dung hiện tại của file. Những gì Claude đọc trước đó có thể đã cũ.",
-        notes: ["Gọi lại y nguyên sẽ lỗi tiếp.", "Đúng.", "replace_all không giúp gì khi đoạn cần thay không còn tồn tại.", "Grep chỉ để tìm, không sửa được."],
+        notes: ["Gọi lại y nguyên sẽ lỗi tiếp.", "Đúng.", "replace_all không giúp gì khi đoạn cần thay không còn tồn tại.", "Edit vẫn sửa được file .ts; còn Grep chỉ để tìm, không sửa được."],
         trap: "Thông tin Claude đọc được là bản chụp tại thời điểm đọc, không tự cập nhật khi file thay đổi.",
       },
     ],

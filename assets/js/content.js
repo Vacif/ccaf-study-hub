@@ -13,15 +13,96 @@ window.COURSE = {
     {
       id: "d0",
       num: 0,
-      title: "Tổng quan kỳ thi",
-      short: "Tổng quan",
+      title: "Nhập môn & tổng quan kỳ thi",
+      short: "Nhập môn",
       weight: 0,
       color: "slate",
-      summary: "Cấu trúc đề, cách tính điểm, các kịch bản thực tế và lộ trình ôn tập.",
+      summary: "Kiến thức nền cho người mới, cấu trúc đề, cách tính điểm, các kịch bản thực tế và lộ trình ôn tập.",
       sections: [
+        {
+          id: "0-0",
+          title: "Kiến thức nền: Claude, API, token và công cụ",
+          goals: ["Hiểu một lần gọi Claude API gửi đi gì và nhận về gì", "Biết token, context window và max_tokens ảnh hưởng tới chi phí và giới hạn ra sao", "Phân biệt Claude API, Agent SDK, Claude Code và MCP để biết mỗi chương nói về cái gì"],
+          widget: "apiBasics",
+          body: `
+<p class="lead"><b>Nói ngắn gọn:</b> trước khi học về agent, bạn cần nắm sáu khái niệm: model, API, token, cuộc hội thoại, công cụ, và ba cách dùng Claude. Bài này giải thích từng khái niệm bằng ví dụ đời thường. Nếu bạn đã từng gọi API của một mô hình ngôn ngữ, có thể đọc lướt.</p>
+<h4>1. Claude và “model”</h4>
+<p>Claude là một mô hình ngôn ngữ lớn (LLM): bạn đưa vào một đoạn chữ, nó viết ra một đoạn chữ. Anthropic cung cấp nhiều phiên bản gọi là <b>model</b>, mỗi model có một mã riêng. Dòng Opus mạnh nhất, Sonnet cân bằng giữa chất lượng và tốc độ, Haiku nhanh và rẻ nhất. Khi gọi Claude, bạn phải chọn model, ví dụ <code>claude-opus-5-5</code>.</p>
+<h4>2. Gọi Claude qua API</h4>
+<p>API giống một quầy giao dịch. Chương trình của bạn gửi một <b>request</b> (yêu cầu) tới địa chỉ của Anthropic, và nhận về một <b>response</b> (phản hồi). Cả hai viết dưới dạng JSON. Một request tối thiểu trông như sau:</p>
+<pre><code>{
+  "model": "claude-opus-5-5",
+  "max_tokens": 1024,
+  "system": "Bạn là nhân viên chăm sóc khách hàng của cửa hàng ABC.",
+  "messages": [
+    { "role": "user", "content": "Cửa hàng cho đổi size giày trong bao lâu?" }
+  ]
+}</code></pre>
+<p>Response trả về có ba phần bạn sẽ gặp suốt khóa học: <code>content</code> (nội dung trả lời), <code>stop_reason</code> (vì sao Claude dừng) và <code>usage</code> (đã dùng bao nhiêu token). Để gọi được API, bạn cần một <b>API key</b>. Key giống mật khẩu ngân hàng: ai có nó là gọi được và bạn trả tiền, nên luôn để trong biến môi trường hoặc kho bí mật, không bao giờ ghi vào code hay đưa lên GitHub.</p>
+<h4>3. Token: đơn vị tính chữ và tính tiền</h4>
+<p>Claude không đọc theo chữ cái mà theo <b>token</b>, là những mẩu chữ ngắn (một từ tiếng Anh thường là một token, tiếng Việt thường tốn nhiều token hơn). Token quan trọng vì ba lý do:</p>
+<ul>
+  <li><b>Tiền:</b> bạn trả tiền theo số token gửi vào (input) và số token Claude viết ra (output). Token đầu ra thường đắt hơn đầu vào vài lần.</li>
+  <li><b>Context window:</b> tổng số token model đọc được trong một lần gọi. Mọi thứ bạn gửi (hướng dẫn, tài liệu, lịch sử trò chuyện) phải nằm vừa trong giới hạn này.</li>
+  <li><b>max_tokens:</b> giới hạn độ dài <i>câu trả lời</i> do bạn đặt. Đặt thấp quá thì câu trả lời bị cắt giữa chừng.</li>
+</ul>
+<h4>4. Claude không có trí nhớ giữa các lần gọi</h4>
+<p>Mỗi lần gọi API là độc lập. Claude không nhớ bạn đã hỏi gì ở lần trước. Muốn trò chuyện nhiều lượt, chương trình của bạn phải tự giữ lịch sử và gửi lại <b>toàn bộ</b> mỗi lần, trong mảng <code>messages</code> với các lượt <code>user</code> và <code>assistant</code> xen kẽ. Phần <code>system</code> là hướng dẫn chung áp dụng cho cả cuộc trò chuyện. Hệ quả: hội thoại càng dài thì mỗi lượt càng tốn nhiều token. Đây là gốc rễ của nhiều câu hỏi về chi phí và về việc “quên” thông tin ở chương 5.</p>
+<h4>5. Công cụ: cách Claude làm việc với hệ thống của bạn</h4>
+<p>Claude không tự truy cập được cơ sở dữ liệu hay gọi hệ thống của bạn. Bạn mô tả cho nó các <b>công cụ</b> (tool): tên, mô tả, và dữ liệu đầu vào cần có. Khi cần, Claude trả về một yêu cầu <code>tool_use</code> kiểu “hãy chạy tra_cuu_don_hang với mã 1234”. Chương trình của bạn chạy thật, rồi gửi kết quả lại dưới dạng <code>tool_result</code>. Lặp lại việc này nhiều lần chính là một <b>agent</b>, chủ đề của chương 1.</p>
+<h4>6. Đọc JSON trong một phút</h4>
+<p>Các mô phỏng trong khóa học hiển thị dữ liệu dạng JSON. Bạn chỉ cần nhận ra: <code>{ }</code> là một đối tượng gồm các cặp <code>"tên": giá trị</code>; <code>[ ]</code> là một danh sách; chữ nằm trong dấu ngoặc kép; ngoài ra có số, <code>true</code>/<code>false</code> (đúng/sai) và <code>null</code> (không có giá trị).</p>
+<h4>7. Ba cách dùng Claude, và MCP</h4>
+<table class="t">
+  <tr><th>Cách dùng</th><th>Là gì</th><th>Khi nào dùng</th></tr>
+  <tr><td><b>Claude API</b></td><td>Gọi trực tiếp như ví dụ ở trên. Bạn tự viết vòng lặp, tự chạy công cụ.</td><td>Xây sản phẩm riêng: chatbot, hệ thống trích xuất dữ liệu, agent chăm sóc khách hàng.</td></tr>
+  <tr><td><b>Claude Agent SDK</b></td><td>Thư viện có sẵn vòng lặp agent, công cụ đọc và sửa file, hook, subagent.</td><td>Xây agent phức tạp mà không phải tự viết phần khung.</td></tr>
+  <tr><td><b>Claude Code</b></td><td>Trợ lý lập trình chạy trong terminal, cấu hình bằng file như CLAUDE.md, .mcp.json.</td><td>Lập trình viên làm việc hằng ngày, hoặc chạy tự động trong CI/CD.</td></tr>
+</table>
+<p><b>MCP</b> (Model Context Protocol) là một chuẩn chung để “cắm” công cụ và dữ liệu bên ngoài vào Claude, giống cổng USB: ai cũng viết được một máy chủ MCP, và Claude Code hay Agent SDK đều dùng được nó.</p>
+<h4>Bản đồ khóa học</h4>
+<ul>
+  <li><b>Chương 1:</b> vòng lặp agent, nhiều agent phối hợp, hook. Tức là cách xây một agent chạy ổn định.</li>
+  <li><b>Chương 2:</b> thiết kế công cụ và kết nối MCP sao cho Claude chọn đúng và xử lý lỗi tốt.</li>
+  <li><b>Chương 3:</b> cấu hình Claude Code cho một nhóm lập trình viên và cho CI/CD.</li>
+  <li><b>Chương 4:</b> viết prompt rõ ràng và lấy đầu ra có cấu trúc (JSON) đáng tin cậy.</li>
+  <li><b>Chương 5:</b> giữ thông tin quan trọng trong hội thoại dài, xử lý lỗi, và biết khi nào cần con người.</li>
+</ul>`,
+          keyPoints: [
+            "Mỗi lần gọi API là độc lập: Claude không nhớ gì, chương trình phải gửi lại cả hội thoại.",
+            "Token là đơn vị tính tiền và giới hạn: context window cho phần đọc vào, max_tokens cho phần trả lời.",
+            "Claude không tự chạy công cụ: nó chỉ yêu cầu, chương trình của bạn mới là bên chạy thật.",
+            "API key là bí mật: để trong biến môi trường hoặc kho bí mật, không ghi vào code.",
+          ],
+          tip: "Nhiều đáp án sai trong đề dựa trên hiểu nhầm cơ bản như “model tự nhớ hội thoại” hay “Claude tự gọi được hệ thống”. Nắm chắc bài này giúp bạn loại nhanh những đáp án đó.",
+          quiz: [
+            {
+              q: "Khách nhắn ba tin liên tiếp với chatbot. Ở lần gọi API thứ ba, chương trình cần gửi gì để Claude hiểu đúng ngữ cảnh?",
+              options: ["Chỉ tin nhắn thứ ba, vì Claude đã lưu hai tin trước trên máy chủ", "Cả ba tin của khách cùng hai câu trả lời trước đó, theo đúng thứ tự", "Chỉ tin nhắn thứ ba kèm mã phiên để Claude tự tìm lại lịch sử", "Một câu tóm tắt cả cuộc trò chuyện thay cho các tin nhắn cũ"],
+              en: { q: "A customer sends three messages in a row to a chatbot. On the third API call, what must the program send so Claude understands the context?", options: ["Only the third message, since Claude stored the first two on its servers", "All three customer messages plus the two previous replies, in order", "Only the third message with a session ID so Claude can look up the history", "A one-line summary of the conversation instead of the old messages"] },
+              answer: 1,
+              explain: "API không lưu trạng thái giữa các lần gọi. Mỗi lần, chương trình gửi lại toàn bộ hội thoại (tin của người dùng và các câu trả lời trước của Claude) theo đúng thứ tự.",
+            },
+            {
+              q: "Câu trả lời của Claude thường bị cắt ngang giữa câu, và stop_reason là \"max_tokens\". Thứ gì nhiều khả năng đang đặt quá thấp?",
+              options: ["Kích thước context window của model đang dùng", "Tham số temperature trong request", "Tham số max_tokens trong request", "Số lượng công cụ khai báo trong request"],
+              en: { q: "Claude's replies are often cut off mid-sentence, and stop_reason is \"max_tokens\". What is most likely set too low?", options: ["The context window size of the model in use", "The temperature parameter in the request", "The max_tokens parameter in the request", "The number of tools declared in the request"] },
+              answer: 2,
+              explain: "max_tokens giới hạn độ dài phần trả lời. Khi chạm giới hạn, Claude dừng giữa chừng và stop_reason là \"max_tokens\". Context window là giới hạn tổng cho phần đọc vào, khác với giới hạn độ dài câu trả lời.",
+            },
+            {
+              q: "Nhóm lập trình viên của khách muốn một trợ lý đọc và sửa code ngay trong terminal, với quy ước chung đặt trong repo. Nên dùng gì?",
+              options: ["Claude Code, với CLAUDE.md và .mcp.json đặt trong repo", "Tự viết vòng lặp gọi Claude API và công cụ đọc file từ đầu", "Message Batches API để xử lý code mỗi đêm một lần", "Một máy chủ MCP riêng, không cần công cụ nào khác"],
+              en: { q: "A customer's developer team wants an assistant that reads and edits code right in the terminal, with shared conventions stored in the repo. What should they use?", options: ["Claude Code, with CLAUDE.md and .mcp.json in the repo", "Write their own loop around the Claude API plus file tools from scratch", "The Message Batches API to process code once a night", "A standalone MCP server with no other tooling"] },
+              answer: 0,
+              explain: "Claude Code chính là trợ lý lập trình chạy trong terminal, cấu hình chung qua các file đặt trong repo. Tự viết từ đầu là làm lại thứ đã có sẵn; Batch API không dùng cho làm việc tương tác; MCP chỉ là cách cắm thêm công cụ.",
+            },
+          ],
+        },
         {
           id: "0-1",
           title: "Định dạng kỳ thi & cách tính điểm",
+          goals: ["Biết đề thi có bao nhiêu câu, bao nhiêu phút và cần bao nhiêu điểm để đạt", "Biết năm lĩnh vực và lĩnh vực nào chiếm nhiều câu nhất", "Hiểu vì sao đáp án đúng thường là cách sửa đúng nguyên nhân, đơn giản nhất"],
           widget: "examOverview",
           body: `
 <p class="lead"><b>Nói ngắn gọn:</b> CCA-F kiểm tra xem bạn có biết cách thiết kế một ứng dụng dùng Claude chạy ổn định ngoài đời thật hay không, chứ không kiểm tra bạn thuộc bao nhiêu tên lệnh.</p>
@@ -46,6 +127,7 @@ window.COURSE = {
             {
               q: "Lĩnh vực nào có trọng số lớn nhất trong đề CCA-F?",
               options: ["Prompt Engineering & Structured Output", "Agentic Architecture & Orchestration", "Tool Design & MCP Integration", "Context Management & Reliability"],
+              en: { q: "Which domain carries the largest weight on the CCA-F exam?", options: ["Prompt Engineering & Structured Output", "Agentic Architecture & Orchestration", "Tool Design & MCP Integration", "Context Management & Reliability"] },
               answer: 1,
               explain: "Agentic Architecture & Orchestration chiếm khoảng 27% — tương đương ~16 câu trong 60 câu.",
             },
@@ -54,6 +136,7 @@ window.COURSE = {
         {
           id: "0-2",
           title: "Các kịch bản thi & lộ trình ôn tập",
+          goals: ["Nhận ra sáu kịch bản thực tế mà các câu hỏi thường dựa vào", "Đọc một câu hỏi theo thứ tự: hệ thống gì, ràng buộc gì, rồi mới tới đáp án", "Lập được lịch ôn theo trọng số của từng chương"],
           widget: "studyPlan",
           body: `
 <p class="lead"><b>Nói ngắn gọn:</b> mọi câu hỏi đều xoay quanh sáu loại hệ thống quen thuộc. Nhận ra câu hỏi đang nói về loại nào giúp bạn đoán được đề muốn kiểm tra kiến thức gì.</p>
@@ -78,7 +161,8 @@ window.COURSE = {
           quiz: [
             {
               q: "Khi đọc một câu hỏi dạng kịch bản, bước nào nên làm trước tiên?",
-              options: ["Chọn đáp án dài nhất", "Xác định kịch bản và ràng buộc chính (độ tin cậy, chi phí, độ trễ)", "Tìm từ khóa trùng với tên công cụ", "Loại các đáp án có nhắc đến hook"],
+              options: ["Đọc lướt bốn đáp án để đoán xem đề đang hỏi về công cụ nào", "Xác định đây là hệ thống gì và ràng buộc chính (tin cậy, chi phí, độ trễ)", "Tìm trong đáp án từ khóa trùng với tên công cụ được nhắc trong đề", "Loại ngay những đáp án có nhắc tới hook hoặc subagent vì thường phức tạp"],
+              en: { q: "When reading a scenario-based question, what should you do first?", options: ["Skim the four options to guess which tool the question is about", "Identify what kind of system it is and the key constraint (reliability, cost, latency)", "Look for options containing keywords that match a tool named in the question", "Eliminate any option that mentions hooks or subagents, since they are usually overkill"] },
               answer: 1,
               explain: "Ràng buộc của kịch bản quyết định đáp án: ví dụ cần kết quả ngay thì Batch API bị loại, cần tuân thủ tuyệt đối thì prompt đơn thuần bị loại.",
             },
@@ -96,6 +180,7 @@ window.COURSE = {
       id: "d1",
       num: 1,
       title: "Agentic Architecture & Orchestration",
+      vi: "Kiến trúc agent & điều phối",
       short: "Kiến trúc Agent",
       weight: 27,
       color: "violet",
@@ -104,6 +189,7 @@ window.COURSE = {
         {
           id: "1-1",
           title: "Vòng lặp agent (agentic loop)",
+          goals: ["Mô tả được một lượt của vòng lặp agent: gửi, nhận, chạy công cụ, gửi lại", "Dùng stop_reason để quyết định chạy tiếp hay dừng, kể cả trường hợp max_tokens", "Ghép đúng tool_use với tool_result, kể cả khi một công cụ bị lỗi"],
           widget: "agentLoop",
           body: `
 <p class="lead"><b>Hình dung:</b> Claude giống một chuyên viên tư vấn ngồi trong phòng kín. Họ không tự cầm máy gọi xuống kho được. Khi cần tra đơn hàng, họ viết một tờ giấy “nhờ tra giúp đơn #1234” rồi đưa ra ngoài. Bạn (chương trình của bạn) cầm tờ giấy đi tra thật, rồi mang kết quả vào. Việc này lặp lại cho tới khi chuyên viên nói “tôi xong rồi”. Vòng lặp qua lại đó chính là vòng lặp agent.</p>
@@ -130,22 +216,24 @@ window.COURSE = {
             {
               q: "Agent của bạn đôi khi dừng sớm vì code kiểm tra 'response có chứa text không' để kết thúc vòng lặp. Cách sửa đúng là gì?",
               options: [
-                "Thêm vào system prompt: 'chỉ trả lời text khi đã xong'",
-                "Kết thúc vòng lặp khi stop_reason là \"end_turn\", tiếp tục khi là \"tool_use\"",
-                "Giới hạn cứng 10 vòng lặp rồi dừng",
-                "Tìm các cụm từ như 'hoàn thành' trong câu trả lời",
+                "Thêm vào system prompt: 'chỉ trả lời bằng chữ khi đã làm xong mọi việc'",
+                "Dừng khi stop_reason là \"end_turn\", tiếp tục khi là \"tool_use\"",
+                "Bỏ kiểm tra chữ, chạy cố định 10 vòng lặp rồi mới dừng",
+                "Chỉ dừng khi câu trả lời có các cụm như 'hoàn thành' hoặc 'đã xong'",
               ],
+              en: { q: "Your agent sometimes stops early because the code checks 'does the response contain text?' to end the loop. What is the correct fix?", options: ["Add to the system prompt: 'only reply with text once everything is done'", "Stop when stop_reason is \"end_turn\" and continue when it is \"tool_use\"", "Drop the text check and always run exactly 10 iterations before stopping", "Only stop when the reply contains phrases like 'completed' or 'all done'"] },
               answer: 1,
               explain: "stop_reason là tín hiệu có cấu trúc, đáng tin cậy. Response có thể vừa chứa text vừa chứa tool_use, nên kiểm tra text là sai.",
             },
             {
               q: "Sau khi thực thi công cụ, kết quả cần được xử lý thế nào?",
               options: [
-                "Lưu vào database, không cần gửi lại cho Claude",
-                "Nối vào messages dưới dạng tool_result rồi gửi yêu cầu tiếp theo",
-                "Ghi đè system prompt bằng kết quả",
-                "Chỉ gửi lại nếu công cụ báo lỗi",
+                "Lưu kết quả vào database để Claude tự tra cứu ở lượt sau",
+                "Thêm vào messages dưới dạng tool_result rồi gọi Claude lần nữa",
+                "Ghép kết quả vào system prompt để Claude luôn nhìn thấy",
+                "Chỉ gửi lại cho Claude khi công cụ báo lỗi, còn lại trả thẳng cho khách",
               ],
+              en: { q: "After a tool has been executed, what should happen to its result?", options: ["Store it in a database so Claude can look it up on the next turn", "Append it to messages as a tool_result and call Claude again", "Merge it into the system prompt so Claude always sees it", "Send it back to Claude only if the tool failed; otherwise return it to the user"] },
               answer: 1,
               explain: "Claude cần thấy tool_result trong lịch sử hội thoại để suy luận bước tiếp theo.",
             },
@@ -154,6 +242,7 @@ window.COURSE = {
         {
           id: "1-2",
           title: "Hệ thống đa agent: coordinator – subagent",
+          goals: ["Hiểu vai trò của coordinator và subagent trong mô hình trục và nan hoa", "Biết subagent không tự thấy lịch sử của coordinator", "Tìm đúng nguyên nhân khi báo cáo cuối thiếu nội dung"],
           widget: "hubSpoke",
           body: `
 <p class="lead"><b>Hình dung:</b> một trưởng nhóm nhận dự án lớn, chia thành phần nhỏ và giao cho từng thành viên qua phiếu giao việc. Thành viên chỉ biết những gì ghi trên phiếu, không nghe được các cuộc họp trước đó. Mọi kết quả đều nộp lại cho trưởng nhóm để ghép thành báo cáo chung. Trong hệ thống nhiều agent, trưởng nhóm là <b>coordinator</b> (agent điều phối), còn các thành viên là <b>subagent</b> (agent con).</p>
@@ -178,22 +267,24 @@ window.COURSE = {
             {
               q: "Hệ thống nghiên cứu đa agent cho ra báo cáo bỏ sót nhiều khía cạnh, dù log cho thấy mỗi subagent đều hoàn thành tốt phần được giao. Nguyên nhân gốc khả dĩ nhất?",
               options: [
-                "Subagent tìm kiếm dùng truy vấn quá ngắn",
-                "Coordinator phân rã chủ đề thành các tác vụ con quá hẹp",
-                "Subagent tổng hợp bị giới hạn token",
-                "Cần thêm subagent kiểm tra chính tả",
+                "Subagent tìm kiếm dùng truy vấn quá ngắn nên trả về ít nguồn",
+                "Coordinator chia chủ đề thành các tác vụ con quá hẹp",
+                "Subagent tổng hợp bị giới hạn token nên phải cắt bớt nội dung",
+                "Thiếu một subagent kiểm tra lại chính tả và trình bày báo cáo",
               ],
+              en: { q: "A multi-agent research system produces reports that miss many aspects, even though logs show every subagent completed its assigned part well. What is the most likely root cause?", options: ["The search subagent uses queries that are too short, so it finds few sources", "The coordinator decomposed the topic into subtasks that are too narrow", "The synthesis subagent hits its token limit and has to cut content", "There is no subagent to proofread and format the final report"] },
               answer: 1,
               explain: "Subagent chỉ làm những gì được giao. Nếu tất cả đều làm đúng mà vẫn thiếu, lỗi nằm ở bước phân rã.",
             },
             {
               q: "Subagent phân tích không biết các nguồn mà subagent tìm kiếm đã thu thập. Cách khắc phục?",
               options: [
-                "Bật tùy chọn chia sẻ bộ nhớ toàn cục giữa các subagent",
-                "Coordinator đưa trực tiếp kết quả tìm kiếm vào prompt của subagent phân tích",
-                "Cho subagent phân tích tự gọi lại subagent tìm kiếm",
-                "Tăng max_tokens cho subagent phân tích",
+                "Bật tùy chọn chia sẻ bộ nhớ chung để mọi subagent cùng thấy dữ liệu",
+                "Coordinator đưa kết quả tìm kiếm vào prompt của subagent phân tích",
+                "Cho subagent phân tích tự gọi lại subagent tìm kiếm khi cần",
+                "Tăng max_tokens để subagent phân tích nhớ được nhiều hơn",
               ],
+              en: { q: "The analysis subagent does not know which sources the search subagent collected. How do you fix this?", options: ["Turn on a shared-memory option so every subagent sees the same data", "Have the coordinator pass the search results into the analysis subagent's prompt", "Let the analysis subagent call the search subagent itself when needed", "Raise max_tokens so the analysis subagent can remember more"] },
               answer: 1,
               explain: "Ngữ cảnh subagent là cô lập; coordinator phải truyền thông tin cần thiết một cách tường minh.",
             },
@@ -202,6 +293,7 @@ window.COURSE = {
         {
           id: "1-3",
           title: "Gọi subagent & truyền ngữ cảnh",
+          goals: ["Gọi subagent bằng công cụ Task và biết cần khai báo gì trong allowedTools", "Viết phiếu giao việc đủ thông tin, kèm nguồn gốc dữ liệu", "Cho nhiều subagent chạy song song trong cùng một lượt"],
           widget: "contextPassing",
           body: `
 <p class="lead"><b>Hình dung:</b> giao việc cho một cộng tác viên làm từ xa, người chưa từng dự cuộc họp nào của nhóm. Phiếu giao việc phải tự đủ: mục tiêu là gì, dữ liệu đầu vào đâu, làm xong thì nộp theo mẫu nào. Thiếu một trong các thứ đó là họ phải đoán.</p>
@@ -227,17 +319,19 @@ window.COURSE = {
             {
               q: "Coordinator gọi lần lượt 4 subagent tìm kiếm độc lập, mỗi lượt một subagent, khiến độ trễ cao. Cải thiện tốt nhất?",
               options: [
-                "Gộp 4 subagent thành một subagent lớn",
-                "Phát ra 4 lệnh gọi Task trong cùng một response để chạy song song",
-                "Chuyển sang Message Batches API",
-                "Giảm số nguồn tìm kiếm xuống còn 1",
+                "Gộp 4 subagent thành một subagent lớn tìm lần lượt cả 4 nguồn trong một lượt",
+                "Phát 4 lệnh gọi Task trong cùng một response để chạy song song",
+                "Chuyển 4 lượt tìm kiếm sang Message Batches API",
+                "Giảm còn 1 nguồn tìm kiếm có chất lượng tốt nhất",
               ],
+              en: { q: "A coordinator calls 4 independent search subagents one at a time, one per turn, causing high latency. What is the best improvement?", options: ["Merge the 4 subagents into one large subagent that searches all 4 sources in one turn", "Emit 4 Task calls in a single response so they run in parallel", "Move the 4 searches to the Message Batches API", "Cut down to the single highest-quality search source"] },
               answer: 1,
               explain: "Các tác vụ độc lập nên được gọi song song trong một lượt. Batch API không phù hợp vì có độ trễ tới 24 giờ.",
             },
             {
               q: "Coordinator không thể tạo subagent nào. Kiểm tra điều gì đầu tiên?",
-              options: ["allowedTools có chứa \"Task\" không", "Phiên bản model", "Biến môi trường ANTHROPIC_LOG", "Kích thước system prompt"],
+              options: ["allowedTools có chứa \"Task\" không", "Model đang dùng có hỗ trợ subagent không", "Biến môi trường ANTHROPIC_LOG đã bật chưa", "System prompt của coordinator có quá dài không"],
+              en: { q: "The coordinator cannot spawn any subagent. What should you check first?", options: ["Whether allowedTools includes \"Task\"", "Whether the current model supports subagents", "Whether the ANTHROPIC_LOG environment variable is set", "Whether the coordinator's system prompt is too long"] },
               answer: 0,
               explain: "Subagent được gọi qua công cụ Task; thiếu nó trong allowedTools thì coordinator không thể ủy thác.",
             },
@@ -246,6 +340,7 @@ window.COURSE = {
         {
           id: "1-4",
           title: "Ép buộc quy trình & bàn giao (handoff)",
+          goals: ["Phân biệt lời dặn trong prompt (xác suất) với kiểm tra bằng code (chắc chắn)", "Chặn một thao tác quan trọng bằng code cho tới khi đủ điều kiện", "Viết bản bàn giao có cấu trúc khi chuyển cho nhân viên"],
           widget: "enforcement",
           body: `
 <p class="lead"><b>Hình dung:</b> dán tờ giấy “nhớ kiểm tra CMND trước khi rút tiền” lên quầy giao dịch thì hầu hết nhân viên sẽ làm theo, nhưng thỉnh thoảng vẫn có người quên. Còn nếu máy rút tiền không chạy được khi chưa quét thẻ, thì không ai quên được. Dặn trong prompt giống tờ giấy dán quầy; kiểm tra bằng code giống chiếc máy.</p>
@@ -266,22 +361,24 @@ window.COURSE = {
             {
               q: "Agent hỗ trợ đôi khi hoàn tiền trước khi xác minh danh tính khách hàng, dù system prompt đã yêu cầu xác minh trước. Giải pháp phù hợp nhất?",
               options: [
-                "Viết hoa và lặp lại yêu cầu trong system prompt",
-                "Thêm few-shot ví dụ về việc xác minh",
-                "Thêm cổng kiểm tra bằng code chặn process_refund cho tới khi có ID khách hàng đã xác minh",
-                "Đổi sang model lớn hơn",
+                "Viết hoa và nhắc lại yêu cầu xác minh ở đầu và cuối system prompt",
+                "Thêm vài ví dụ few-shot cho thấy luôn xác minh trước khi hoàn tiền",
+                "Chặn process_refund bằng code cho tới khi có ID khách đã xác minh",
+                "Đổi sang model lớn hơn, vốn tuân thủ hướng dẫn tốt hơn",
               ],
+              en: { q: "A support agent sometimes issues refunds before verifying the customer's identity, even though the system prompt says to verify first. What is the best fix?", options: ["Write the verification rule in capitals and repeat it at the start and end of the system prompt", "Add a few few-shot examples that always verify before refunding", "Block process_refund in code until a verified customer ID exists", "Switch to a larger model that follows instructions better"] },
               answer: 2,
               explain: "Với yêu cầu tuân thủ tuyệt đối có hệ quả tài chính, cần đảm bảo mang tính quyết định — prompt chỉ cho xác suất.",
             },
             {
               q: "Khi chuyển cuộc hội thoại cho nhân viên, thông tin nào hữu ích nhất?",
               options: [
-                "Toàn bộ transcript thô",
-                "Tóm tắt có cấu trúc: ID khách hàng, nguyên nhân gốc, số tiền liên quan, hành động đề xuất",
-                "Chỉ câu hỏi cuối cùng của khách",
-                "Điểm cảm xúc (sentiment) của khách",
+                "Toàn bộ transcript thô để nhân viên tự đọc lại từ đầu",
+                "Bản tóm tắt có cấu trúc: ID khách, nguyên nhân, số tiền, đề xuất xử lý",
+                "Câu hỏi cuối cùng của khách, vì đó là điều khách cần nhất",
+                "Điểm cảm xúc (sentiment) của khách qua từng lượt để nhân viên biết khách đang bực cỡ nào",
               ],
+              en: { q: "When handing a conversation over to a human agent, what information is most useful?", options: ["The full raw transcript so the human can read it from the start", "A structured summary: customer ID, root cause, amount, recommended action", "The customer's last question, since that is what they need most", "The customer's sentiment score per turn so the human knows how upset they are"] },
               answer: 1,
               explain: "Nhân viên cần nắm vấn đề nhanh mà không phải đọc lại toàn bộ hội thoại.",
             },
@@ -290,6 +387,7 @@ window.COURSE = {
         {
           id: "1-5",
           title: "Hook trong Agent SDK",
+          goals: ["Biết hook là gì và vì sao nó luôn chạy, không phụ thuộc model", "Chọn đúng PreToolUse để chặn và PostToolUse để chỉnh kết quả", "Viết được matcher đúng tên công cụ, kể cả công cụ MCP"],
           widget: "hookPipeline",
           body: `
 <p class="lead"><b>Hình dung:</b> ở cửa kho hàng có hai người. Người gác cửa vào xem phiếu xuất kho và có quyền chặn lại nếu sai quy định. Người ở cửa ra kiểm tra và dán nhãn lại hàng cho đúng chuẩn trước khi giao đi. Hook chính là hai người này, đứng hai đầu mỗi lần agent dùng công cụ.</p>
@@ -311,17 +409,19 @@ window.COURSE = {
             {
               q: "Ba công cụ trả về ngày theo 3 định dạng khác nhau khiến agent so sánh sai. Cách xử lý tốt nhất?",
               options: [
-                "Thêm hướng dẫn chuyển đổi định dạng vào system prompt",
-                "Dùng hook PostToolUse chuẩn hóa mọi ngày về ISO 8601 trước khi model nhận",
-                "Yêu cầu người dùng nhập ngày theo một định dạng",
-                "Dùng PreToolUse để chặn công cụ trả ngày sai định dạng",
+                "Thêm hướng dẫn quy đổi định dạng ngày vào system prompt",
+                "Dùng hook PostToolUse đổi mọi ngày về ISO 8601 trước khi model nhận",
+                "Yêu cầu người dùng luôn nhập ngày theo một định dạng thống nhất",
+                "Dùng hook PreToolUse chặn những công cụ trả ngày sai định dạng và yêu cầu gọi lại",
               ],
+              en: { q: "Three tools return dates in three different formats, causing the agent to compare them wrongly. What is the best approach?", options: ["Add date-conversion instructions to the system prompt", "Use a PostToolUse hook to convert every date to ISO 8601 before the model sees it", "Ask users to always enter dates in one consistent format", "Use a PreToolUse hook to block tools that return badly formatted dates and ask for a retry"] },
               answer: 1,
               explain: "PostToolUse biến đổi kết quả công cụ một cách nhất quán, không phụ thuộc vào việc model có làm theo hướng dẫn hay không.",
             },
             {
               q: "Chính sách: hoàn tiền trên $500 phải do người duyệt. Hook nào phù hợp?",
-              options: ["PostToolUse trên process_refund", "PreToolUse chặn process_refund khi số tiền > 500 và chuyển sang escalate", "Hook khi phiên kết thúc", "Không cần hook, chỉ cần prompt"],
+              options: ["Hook PostToolUse trên process_refund để kiểm tra số tiền đã hoàn và báo quản lý nếu vượt 500", "Hook PreToolUse chặn process_refund khi số tiền > 500, chuyển người duyệt", "Hook chạy khi kết thúc phiên để rà lại các khoản hoàn tiền", "Không cần hook, chỉ cần ghi rõ chính sách vào system prompt"],
+              en: { q: "Policy: refunds over $500 must be approved by a human. Which hook fits?", options: ["A PostToolUse hook on process_refund that checks the refunded amount and alerts a manager if it exceeds 500", "A PreToolUse hook that blocks process_refund when amount > 500 and routes to a human", "A hook that runs at session end to review all refunds", "No hook needed; just state the policy clearly in the system prompt"] },
               answer: 1,
               explain: "Phải chặn trước khi hành động xảy ra — PostToolUse thì đã muộn.",
             },
@@ -330,6 +430,7 @@ window.COURSE = {
         {
           id: "1-6",
           title: "Phân rã tác vụ & quản lý phiên",
+          goals: ["Chọn giữa chuỗi bước cố định và chia việc linh hoạt", "Chia việc review nhiều file thành từng file và một lượt xem liên kết", "Biết khi nào nên mở lại phiên cũ, tách nhánh, hay mở phiên mới kèm tóm tắt"],
           widget: "decomposition",
           body: `
 <p class="lead"><b>Hình dung:</b> nấu một món quen thì làm theo công thức từng bước. Còn khi sửa một cái máy lạ bị hỏng, bạn phải mở ra xem trước rồi mới biết bước tiếp theo. Chia nhỏ công việc cho agent cũng có hai kiểu như vậy.</p>
@@ -353,22 +454,24 @@ window.COURSE = {
             {
               q: "Review một PR 30 file trong một prompt cho kết quả nông và mâu thuẫn. Cải thiện tốt nhất?",
               options: [
-                "Dùng model có context window lớn hơn",
-                "Phân tích từng file riêng rồi thêm một lượt tích hợp để tìm vấn đề xuyên file",
-                "Yêu cầu model 'đọc kỹ hơn'",
-                "Chỉ review 5 file đầu tiên",
+                "Dùng model có context window lớn hơn để đọc hết 30 file một lần",
+                "Review từng file riêng, rồi thêm một lượt tìm vấn đề xuyên file",
+                "Thêm vào prompt yêu cầu model đọc kỹ từng file trước khi kết luận",
+                "Chỉ review 5 file thay đổi nhiều nhất, bỏ qua phần còn lại",
               ],
+              en: { q: "Reviewing a 30-file PR in a single prompt gives shallow and contradictory results. What is the best improvement?", options: ["Use a model with a bigger context window so it reads all 30 files at once", "Review each file separately, then add one pass that looks for cross-file issues", "Add an instruction asking the model to read every file carefully before concluding", "Only review the 5 most-changed files and skip the rest"] },
               answer: 1,
               explain: "Chia nhỏ giúp mỗi lượt có chú ý tập trung; lượt tích hợp bắt các vấn đề luồng dữ liệu giữa file.",
             },
             {
               q: "Bạn quay lại một phiên điều tra sau khi đồng nghiệp refactor lớn. Cách tiếp cận đáng tin cậy nhất?",
               options: [
-                "Resume phiên cũ và tiếp tục như bình thường",
-                "Bắt đầu phiên mới với bản tóm tắt phát hiện trước đó và nêu rõ file nào đã thay đổi",
-                "Xóa toàn bộ ghi chú và điều tra lại từ đầu",
-                "Fork phiên cũ thành 3 nhánh",
+                "Resume phiên cũ và tiếp tục như bình thường vì ngữ cảnh vẫn còn",
+                "Mở phiên mới kèm tóm tắt phát hiện cũ và danh sách file đã đổi",
+                "Xóa hết ghi chú cũ và điều tra lại từ đầu cho chắc",
+                "Fork phiên cũ thành ba nhánh để thử song song",
               ],
+              en: { q: "You return to an investigation session after a colleague did a large refactor. What is the most reliable approach?", options: ["Resume the old session and carry on, since the context is still there", "Start a new session with a summary of earlier findings and the list of changed files", "Delete all previous notes and investigate from scratch to be safe", "Fork the old session into three branches and try them in parallel"] },
               answer: 1,
               explain: "Kết quả công cụ cũ trong phiên có thể đã sai; tóm tắt + thông tin thay đổi cho ngữ cảnh sạch và chính xác.",
             },
@@ -390,6 +493,7 @@ window.COURSE = {
       id: "d2",
       num: 2,
       title: "Tool Design & MCP Integration",
+      vi: "Thiết kế công cụ & tích hợp MCP",
       short: "Công cụ & MCP",
       weight: 18,
       color: "teal",
@@ -398,6 +502,7 @@ window.COURSE = {
         {
           id: "2-1",
           title: "Thiết kế mô tả công cụ",
+          goals: ["Hiểu vì sao đoạn mô tả là căn cứ chính để Claude chọn công cụ", "Viết mô tả công cụ có đầu vào, ví dụ, và khi nào không nên dùng", "Xử lý hai công cụ hay bị nhầm bằng cách đổi tên hoặc tách nhỏ"],
           widget: "toolDescription",
           body: `
 <p class="lead"><b>Hình dung:</b> thực đơn nhà hàng ghi hai món “Cơm 1” và “Cơm 2” mà không mô tả gì thêm, khách sẽ gọi nhầm. Ghi rõ “Cơm gà nướng, không cay” và “Cơm sườn, có trứng” thì không ai nhầm. Claude chọn công cụ cũng giống khách đọc thực đơn.</p>
@@ -421,11 +526,12 @@ window.COURSE = {
             {
               q: "Agent liên tục gọi get_customer khi người dùng hỏi về đơn hàng (lẽ ra là lookup_order). Hai công cụ có mô tả gần giống nhau. Bước đầu tiên hiệu quả nhất?",
               options: [
-                "Thêm classifier định tuyến trước agent",
-                "Viết lại mô tả hai công cụ: nêu đầu vào, ví dụ truy vấn và khi nào dùng công cụ nào",
-                "Gộp hai công cụ làm một",
-                "Fine-tune model trên log hội thoại",
+                "Thêm một bộ phân loại định tuyến đứng trước agent",
+                "Viết lại mô tả hai công cụ: đầu vào, ví dụ, khi nào dùng cái nào",
+                "Gộp hai công cụ thành một công cụ tra cứu chung",
+                "Fine-tune model trên log hội thoại để chọn công cụ đúng hơn",
               ],
+              en: { q: "The agent keeps calling get_customer when users ask about orders (it should call lookup_order). The two tools have nearly identical descriptions. What is the most effective first step?", options: ["Add a routing classifier in front of the agent", "Rewrite both tool descriptions: inputs, examples, and when to use which", "Merge the two tools into one general lookup tool", "Fine-tune the model on conversation logs so it picks tools better"] },
               answer: 1,
               explain: "Mô tả rõ ràng, phân biệt là cách khắc phục trực tiếp và rẻ nhất cho lỗi chọn công cụ.",
             },
@@ -434,6 +540,7 @@ window.COURSE = {
         {
           id: "2-2",
           title: "Phản hồi lỗi có cấu trúc trong MCP",
+          goals: ["Trả lỗi có cấu trúc: isError, loại lỗi, có nên thử lại không", "Phân biệt lỗi tạm thời, lỗi dữ liệu đầu vào, lỗi nghiệp vụ và lỗi quyền", "Không nhầm “không có kết quả” với “bị lỗi khi truy cập”"],
           widget: "errorBuilder",
           body: `
 <p class="lead"><b>Hình dung:</b> bạn gọi tổng đài, nhân viên chỉ nói “có lỗi” rồi cúp máy. Bạn không biết nên gọi lại sau, đổi cách khác, hay bỏ cuộc. Nếu họ nói “hệ thống đang bảo trì, 10 phút nữa gọi lại”, bạn biết ngay phải làm gì. Agent cũng cần được báo lỗi rõ ràng như thế.</p>
@@ -458,22 +565,24 @@ window.COURSE = {
             {
               q: "Công cụ tìm kiếm trả về [] khi API timeout. Agent kết luận 'không có kết quả'. Vấn đề là gì?",
               options: [
-                "Timeout quá dài",
-                "Lỗi truy cập bị che giấu thành kết quả rỗng hợp lệ — cần trả isError với errorCategory transient",
-                "Agent cần prompt tốt hơn",
-                "Nên dùng Batch API",
+                "Timeout đặt quá dài nên agent chờ lâu rồi bỏ cuộc",
+                "Lỗi bị giấu thành kết quả rỗng; cần trả isError loại transient",
+                "Prompt của agent chưa dặn rằng kết quả rỗng có thể là lỗi, cần kiểm tra lại trước khi kết luận",
+                "Nên chuyển công cụ tìm kiếm sang Batch API cho ổn định",
               ],
+              en: { q: "A search tool returns [] when the API times out. The agent concludes 'no results found'. What is the problem?", options: ["The timeout is too long, so the agent waits and gives up", "An error is disguised as an empty result; return isError with a transient category", "The agent's prompt never says an empty result might be an error that needs double-checking", "The search tool should move to the Batch API for stability"] },
               answer: 1,
               explain: "Agent không thể phân biệt 'không có dữ liệu' với 'không truy cập được' nếu công cụ che lỗi.",
             },
             {
               q: "Khách yêu cầu hoàn tiền cho đơn đã quá hạn 90 ngày. Công cụ nên trả về gì?",
               options: [
-                "isError, category business, isRetryable false, kèm lý do dễ hiểu",
-                "isError, category transient, isRetryable true",
-                "Thành công với số tiền 0",
-                "Ném exception không có thông điệp",
+                "isError, loại business, isRetryable false, kèm lý do dễ hiểu",
+                "isError, loại transient, isRetryable true để agent thử lại sau",
+                "Trả thành công với số tiền hoàn bằng 0 để không làm gián đoạn",
+                "Ném exception để agent tự hiểu là không được hoàn tiền",
               ],
+              en: { q: "A customer asks for a refund on an order that is past the 90-day window. What should the tool return?", options: ["isError, category business, isRetryable false, with a clear reason", "isError, category transient, isRetryable true so the agent retries later", "Success with a refund amount of 0 to avoid interrupting the flow", "Throw an exception so the agent figures out the refund is not allowed"] },
               answer: 0,
               explain: "Đây là vi phạm quy tắc nghiệp vụ — thử lại cũng vô ích, agent cần giải thích cho khách.",
             },
@@ -482,6 +591,7 @@ window.COURSE = {
         {
           id: "2-3",
           title: "Phân phối công cụ & tool_choice",
+          goals: ["Giới hạn mỗi agent chỉ có những công cụ đúng vai trò", "Biết auto, any, none và chỉ định đích danh trong tool_choice khác nhau thế nào", "Ép một bước chạy trước rồi mới để Claude tự chọn"],
           widget: "toolChoice",
           body: `
 <p class="lead"><b>Hình dung:</b> đưa cho thợ điện một hộp 18 dụng cụ, trong đó có cả cưa gỗ và máy khoan bê tông, thì họ dễ cầm nhầm và làm những việc không thuộc phần mình. Đưa đúng 4–5 dụng cụ cần thiết thì họ làm nhanh và chính xác hơn.</p>
@@ -509,17 +619,19 @@ window.COURSE = {
             {
               q: "Pipeline trích xuất có 3 schema cho 3 loại tài liệu. Đôi khi model trả lời bằng text thay vì gọi công cụ. Cấu hình nào phù hợp?",
               options: ["tool_choice: \"auto\"", "tool_choice: \"any\"", "Bỏ hết công cụ, dùng prompt yêu cầu JSON", "temperature = 0"],
+              en: { q: "An extraction pipeline has 3 schemas for 3 document types. Sometimes the model replies with text instead of calling a tool. Which setting fits?", options: ["tool_choice: \"auto\"", "tool_choice: \"any\"", "Remove all tools and ask for JSON in the prompt", "temperature = 0"] },
               answer: 1,
               explain: "\"any\" bắt buộc model gọi một công cụ, đồng thời vẫn để model chọn schema phù hợp với loại tài liệu.",
             },
             {
               q: "Subagent tổng hợp thường tự đi tìm kiếm web thay vì dùng tài liệu được cung cấp. Nguyên nhân khả dĩ?",
               options: [
-                "Model quá nhỏ",
-                "Subagent được cấp công cụ tìm kiếm vốn không thuộc vai trò của nó",
-                "Coordinator chạy song song",
-                "Thiếu hook PostToolUse",
+                "Model quá nhỏ nên không hiểu tài liệu được cung cấp",
+                "Subagent được cấp công cụ tìm kiếm không thuộc vai trò của nó",
+                "Coordinator chạy các subagent song song nên các subagent bị lẫn việc của nhau",
+                "Thiếu hook PostToolUse để lọc kết quả tìm kiếm web",
               ],
+              en: { q: "The synthesis subagent often searches the web itself instead of using the documents it was given. What is the likely cause?", options: ["The model is too small to understand the provided documents", "The subagent was given a search tool that is outside its role", "The coordinator runs subagents in parallel, so they mix up each other's tasks", "There is no PostToolUse hook filtering the web search results"] },
               answer: 1,
               explain: "Công cụ ngoài vai trò tạo cơ hội dùng sai. Giới hạn công cụ theo vai trò.",
             },
@@ -528,6 +640,7 @@ window.COURSE = {
         {
           id: "2-4",
           title: "Cấu hình MCP server",
+          goals: ["Biết khi nào khai báo MCP trong .mcp.json và khi nào trong ~/.claude.json", "Đưa khóa bí mật vào qua biến môi trường, không ghi thẳng vào file", "Phân biệt tools và resources của một máy chủ MCP"],
           widget: "mcpConfig",
           body: `
 <p class="lead"><b>Hình dung:</b> MCP giống cổng USB. Thiết bị nào làm theo chuẩn USB cũng cắm vào máy tính được, không cần dây riêng cho từng hãng. Tương tự, công cụ nào viết theo chuẩn MCP cũng cắm được vào Claude Code. Phần này nói về việc khai báo “cắm những gì, ở đâu”.</p>
@@ -551,11 +664,12 @@ window.COURSE = {
             {
               q: "Team muốn mọi developer có cùng MCP server GitHub mà không lộ token. Cách đúng?",
               options: [
-                "Mỗi người tự thêm vào ~/.claude.json",
-                "Commit .mcp.json với \"${GITHUB_TOKEN}\", mỗi người đặt biến môi trường riêng",
-                "Commit .mcp.json chứa token thật trong repo private",
-                "Gửi file cấu hình qua chat nội bộ",
+                "Mỗi người tự thêm máy chủ vào ~/.claude.json của mình",
+                "Commit .mcp.json dùng \"${GITHUB_TOKEN}\", mỗi người tự đặt biến",
+                "Commit .mcp.json chứa token thật vì repo đang để private",
+                "Gửi file cấu hình có sẵn token cho cả nhóm qua chat nội bộ",
               ],
+              en: { q: "A team wants every developer to have the same GitHub MCP server without exposing tokens. What is the right way?", options: ["Each person adds the server to their own ~/.claude.json", "Commit .mcp.json using \"${GITHUB_TOKEN}\" and have each person set the variable", "Commit .mcp.json with the real token, since the repo is private", "Share a config file with the token already in it over internal chat"] },
               answer: 1,
               explain: ".mcp.json ở project scope được chia sẻ qua git; biến môi trường giữ secret ngoài repo.",
             },
@@ -564,6 +678,7 @@ window.COURSE = {
         {
           id: "2-5",
           title: "Công cụ tích hợp sẵn: Read, Write, Edit, Grep, Glob, Bash",
+          goals: ["Chọn đúng công cụ: Grep để tìm nội dung, Glob để tìm theo tên file", "Xử lý khi Edit báo lỗi vì đoạn cần thay bị trùng hoặc không còn đúng", "Tìm hiểu một codebase lạ từ từ, không đọc hết ngay từ đầu"],
           widget: "builtinTools",
           body: `
 <p class="lead"><b>Hình dung:</b> tìm một cuốn sách trong thư viện có hai cách. Tra theo tên sách trên kệ, hoặc tìm theo một câu nằm bên trong sách. Glob là cách thứ nhất, Grep là cách thứ hai.</p>
@@ -589,13 +704,15 @@ window.COURSE = {
           quiz: [
             {
               q: "Cần tìm mọi nơi gọi hàm processPayment() trong codebase. Công cụ phù hợp?",
-              options: ["Glob", "Grep", "Read từng file", "Edit"],
+              options: ["Glob, với mẫu **/*payment*", "Grep, tìm chuỗi processPayment(", "Read, đọc lần lượt từng file", "Edit, đổi tên hàm để xem chỗ nào lỗi"],
+              en: { q: "You need to find every place that calls processPayment() in the codebase. Which tool fits?", options: ["Glob, with the pattern **/*payment*", "Grep, searching for processPayment(", "Read, opening every file one by one", "Edit, renaming the function to see what breaks"] },
               answer: 1,
               explain: "Grep tìm theo nội dung bên trong file.",
             },
             {
               q: "Edit thất bại vì đoạn văn bản neo xuất hiện 3 lần trong file. Phương án dự phòng hợp lý?",
-              options: ["Gọi Edit lặp lại cho đến khi thành công", "Read toàn bộ file rồi Write phiên bản đã sửa", "Dùng Glob", "Xóa file và tạo lại thủ công"],
+              options: ["Gọi lại Edit với cùng đoạn neo cho tới khi thành công", "Read cả file rồi Write lại phiên bản đã sửa", "Dùng Glob để tìm đúng vị trí của đoạn neo", "Xóa file rồi tạo lại thủ công bằng Bash"],
+              en: { q: "Edit fails because the anchor text appears 3 times in the file. What is a reasonable fallback?", options: ["Call Edit again with the same anchor until it succeeds", "Read the whole file, then Write the corrected version", "Use Glob to find the exact position of the anchor", "Delete the file and recreate it manually with Bash"] },
               answer: 1,
               explain: "Khi không có neo duy nhất, Read + Write cho phép kiểm soát nội dung đầy đủ.",
             },
@@ -616,6 +733,7 @@ window.COURSE = {
       id: "d3",
       num: 3,
       title: "Claude Code Configuration & Workflows",
+      vi: "Cấu hình & quy trình Claude Code",
       short: "Claude Code",
       weight: 20,
       color: "orange",
@@ -624,6 +742,7 @@ window.COURSE = {
         {
           id: "3-1",
           title: "Phân cấp CLAUDE.md",
+          goals: ["Biết CLAUDE.md nằm ở đâu thì ai thấy và khi nào được nạp", "Giữ CLAUDE.md gọn bằng @đường/dẫn và thư mục .claude/rules/", "Dùng /memory để kiểm tra file hướng dẫn nào đang có hiệu lực"],
           widget: "claudeMdTree",
           body: `
 <p class="lead"><b>Hình dung:</b> ở công ty có nội quy chung, mỗi phòng có quy định riêng, và bạn có sổ tay ghi chú cá nhân. Nhân viên mới chỉ được phát nội quy chung và quy định của phòng, không có sổ tay của bạn. CLAUDE.md hoạt động theo đúng ba tầng như vậy.</p>
@@ -648,11 +767,12 @@ window.COURSE = {
             {
               q: "Một dev mới clone repo nhưng Claude Code không tuân theo quy ước code của team, trong khi máy của trưởng nhóm thì có. Nguyên nhân khả dĩ nhất?",
               options: [
-                "Dev mới dùng phiên bản Claude Code cũ",
-                "Quy ước nằm trong ~/.claude/CLAUDE.md của trưởng nhóm, không nằm trong repo",
-                "File .mcp.json bị thiếu",
-                "Dev mới chưa bật plan mode",
+                "Dev mới đang dùng phiên bản Claude Code cũ hơn",
+                "Quy ước nằm trong ~/.claude/CLAUDE.md của trưởng nhóm, không ở repo",
+                "Máy dev mới thiếu file .mcp.json nên Claude Code không nạp được quy ước của team",
+                "Dev mới chưa bật plan mode nên Claude bỏ qua quy ước",
               ],
+              en: { q: "A new developer clones the repo, but Claude Code does not follow the team's coding conventions, while it does on the team lead's machine. What is the most likely cause?", options: ["The new developer is running an older Claude Code version", "The conventions live in the lead's ~/.claude/CLAUDE.md, not in the repo", "The new developer's machine lacks .mcp.json, so Claude Code cannot load the team's conventions", "The new developer has not turned on plan mode, so Claude ignores conventions"] },
               answer: 1,
               explain: "User-level CLAUDE.md không được chia sẻ qua git. Chuyển quy ước vào CLAUDE.md của project.",
             },
@@ -661,6 +781,7 @@ window.COURSE = {
         {
           id: "3-2",
           title: "Slash command & Skill",
+          goals: ["Tạo slash command dùng chung cho nhóm hoặc dùng riêng", "Đóng gói một quy trình thành skill và biết khi nào dùng context: fork", "Phân biệt skill (nạp khi cần) với CLAUDE.md (luôn nạp)"],
           widget: "commandsSkills",
           body: `
 <p class="lead"><b>Hình dung:</b> CLAUDE.md giống nội quy dán trên tường, ai bước vào cũng đọc. Slash command và skill giống những quy trình in sẵn cất trong tủ, chỉ lấy ra khi cần làm đúng việc đó.</p>
@@ -688,13 +809,15 @@ window.COURSE = {
           quiz: [
             {
               q: "Muốn cả team có lệnh /review dùng chung, tự có khi clone repo. Đặt ở đâu?",
-              options: ["~/.claude/commands/review.md", ".claude/commands/review.md trong repo", "CLAUDE.md", ".mcp.json"],
+              options: ["~/.claude/commands/review.md trên máy mỗi người", ".claude/commands/review.md trong repo", "Một mục /review trong CLAUDE.md ở gốc repo", "Khai báo lệnh review trong .mcp.json"],
+              en: { q: "You want the whole team to share a /review command that is available automatically after cloning the repo. Where should it go?", options: ["~/.claude/commands/review.md on each person's machine", ".claude/commands/review.md inside the repo", "A /review section in the root CLAUDE.md", "A review command declared in .mcp.json"] },
               answer: 1,
               explain: "Command trong .claude/commands/ của project được version control và chia sẻ.",
             },
             {
               q: "Skill khám phá codebase tạo output rất dài làm phiên chính bị đầy ngữ cảnh. Giải pháp?",
-              options: ["Thêm context: fork vào frontmatter của SKILL.md", "Chuyển nội dung skill vào CLAUDE.md", "Dùng /compact sau mỗi lần chạy", "Tách thành 5 slash command"],
+              options: ["Thêm context: fork vào frontmatter của SKILL.md", "Chuyển nội dung skill vào CLAUDE.md cho gọn", "Chạy /compact sau mỗi lần dùng skill", "Tách skill thành 5 slash command nhỏ hơn"],
+              en: { q: "A codebase-exploration skill produces very long output that fills up the main session's context. What is the fix?", options: ["Add context: fork to the SKILL.md frontmatter", "Move the skill's content into CLAUDE.md to keep it compact", "Run /compact after every use of the skill", "Split the skill into 5 smaller slash commands"] },
               answer: 0,
               explain: "context: fork chạy skill trong subagent riêng, chỉ trả kết quả gọn về phiên chính.",
             },
@@ -703,6 +826,7 @@ window.COURSE = {
         {
           id: "3-3",
           title: "Rule theo đường dẫn (path-specific rules)",
+          goals: ["Viết rule có paths để chỉ nạp khi đụng tới file khớp mẫu", "Viết mẫu glob đúng, biết * và ** khác nhau thế nào", "Chọn giữa rule có paths và CLAUDE.md đặt trong thư mục con"],
           widget: "rulesMatcher",
           body: `
 <p class="lead"><b>Hình dung:</b> quy định “đội mũ bảo hộ” chỉ cần nhắc khi ai đó bước vào công trường, không cần đọc to trong mọi cuộc họp. Rule theo đường dẫn cũng vậy: chỉ được nạp khi Claude đụng tới đúng loại file liên quan.</p>
@@ -726,11 +850,12 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
             {
               q: "File test (*.test.ts) nằm rải rác trong 40 thư mục. Cần quy ước viết test chỉ áp dụng cho chúng. Cách tốt nhất?",
               options: [
-                "Tạo CLAUDE.md trong từng thư mục trong 40 thư mục",
-                "File .claude/rules/testing.md với paths: [\"**/*.test.ts\"]",
-                "Ghi vào ~/.claude/CLAUDE.md",
-                "Thêm vào system prompt của mỗi phiên",
+                "Tạo CLAUDE.md riêng trong từng thư mục trong 40 thư mục",
+                ".claude/rules/testing.md với paths: [\"**/*.test.ts\"]",
+                "Ghi quy ước vào ~/.claude/CLAUDE.md của mỗi người",
+                "Thêm quy ước vào CLAUDE.md gốc để luôn được nạp",
               ],
+              en: { q: "Test files (*.test.ts) are scattered across 40 directories. You need testing conventions that apply only to them. What is the best approach?", options: ["Create a separate CLAUDE.md in each of the 40 directories", ".claude/rules/testing.md with paths: [\"**/*.test.ts\"]", "Write the conventions into each person's ~/.claude/CLAUDE.md", "Add the conventions to the root CLAUDE.md so they always load"] },
               answer: 1,
               explain: "Rule theo glob tự nạp khi chỉnh file khớp mẫu ở bất kỳ đâu.",
             },
@@ -739,6 +864,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
         {
           id: "3-4",
           title: "Plan mode vs thực thi trực tiếp",
+          goals: ["Biết plan mode làm gì và không làm gì", "Quyết định khi nào lập kế hoạch trước, khi nào làm luôn", "Dùng Explore subagent để khảo sát mà không làm đầy ngữ cảnh chính"],
           widget: "planOrDirect",
           body: `
 <p class="lead"><b>Hình dung:</b> sửa một bóng đèn thì cứ làm luôn. Còn sửa lại toàn bộ hệ thống điện trong nhà thì nên đi xem hết các phòng, vẽ sơ đồ, thống nhất kế hoạch rồi mới cắt điện. Plan mode chính là giai đoạn “đi xem và vẽ sơ đồ”.</p>
@@ -762,7 +888,8 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
           quiz: [
             {
               q: "Cần tách một monolith thành microservice, có nhiều phương án chia ranh giới service. Cách làm?",
-              options: ["Thực thi trực tiếp, sửa dần", "Plan mode để khám phá và chốt phương án trước khi sửa", "Tạo slash command", "Dùng Batch API"],
+              options: ["Thực thi trực tiếp, sửa dần từng service và xem kết quả", "Dùng plan mode để khám phá và chốt phương án trước khi sửa", "Tạo một slash command chuyên tách service rồi chạy", "Gửi toàn bộ codebase qua Batch API để phân tích"],
+              en: { q: "You need to split a monolith into microservices, with several possible ways to draw service boundaries. How should you proceed?", options: ["Execute directly, changing one service at a time and checking results", "Use plan mode to explore and settle on an approach before editing", "Create a slash command dedicated to splitting services and run it", "Send the whole codebase through the Batch API for analysis"] },
               answer: 1,
               explain: "Quyết định kiến trúc, nhiều phương án hợp lệ, ảnh hưởng rộng → plan mode.",
             },
@@ -771,6 +898,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
         {
           id: "3-5",
           title: "Tinh chỉnh lặp (iterative refinement)",
+          goals: ["Dùng ví dụ input và output cụ thể khi mô tả bằng lời không hiệu quả", "Dùng thông báo lỗi của test làm phản hồi cho Claude", "Quyết định gửi các vấn đề gộp chung hay tách riêng"],
           widget: "refinement",
           body: `
 <p class="lead"><b>Hình dung:</b> nhờ thợ cắt tóc “cắt gọn gọn một chút” thì mỗi lần ra một kiểu. Đưa cho họ hai tấm ảnh mẫu thì kết quả giống ý hơn nhiều. Làm việc với Claude cũng vậy: ví dụ cụ thể truyền đạt tốt hơn lời mô tả.</p>
@@ -791,7 +919,8 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
           quiz: [
             {
               q: "Claude liên tục hiểu sai cách định dạng lại địa chỉ dù bạn đã mô tả chi tiết. Bước tiếp theo hiệu quả nhất?",
-              options: ["Mô tả dài hơn nữa", "Cung cấp 2–3 ví dụ input → output cụ thể", "Đổi sang plan mode", "Tăng temperature"],
+              options: ["Viết mô tả dài và chi tiết hơn nữa", "Đưa 2–3 ví dụ input → output cụ thể", "Chuyển sang plan mode để Claude suy nghĩ kỹ", "Viết hoa những chỗ Claude hay làm sai"],
+              en: { q: "Claude keeps misunderstanding how to reformat addresses, even though you described it in detail. What is the most effective next step?", options: ["Write an even longer, more detailed description", "Provide 2–3 concrete input → output examples", "Switch to plan mode so Claude thinks harder", "Put the parts Claude gets wrong in capitals"] },
               answer: 1,
               explain: "Ví dụ cụ thể truyền đạt phép biến đổi rõ ràng hơn văn mô tả.",
             },
@@ -800,6 +929,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
         {
           id: "3-6",
           title: "Claude Code trong CI/CD",
+          goals: ["Chạy Claude Code không cần người tương tác bằng cờ -p", "Lấy kết quả có cấu trúc bằng --output-format json và --json-schema", "Cấu hình bot review an toàn: ít quyền, không lặp lại comment cũ"],
           widget: "ciPipeline",
           body: `
 <p class="lead"><b>Hình dung:</b> CI là một máy tự chạy mỗi khi có code mới, không có ai ngồi trước màn hình. Nếu chương trình dừng lại hỏi “bạn có muốn tiếp tục không?”, nó sẽ đứng chờ mãi. Chạy Claude Code trong CI vì thế cần cấu hình để không bao giờ phải chờ người trả lời.</p>
@@ -822,13 +952,15 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
           quiz: [
             {
               q: "Job CI gọi Claude Code bị treo vô thời hạn. Nguyên nhân khả dĩ nhất?",
-              options: ["Thiếu cờ -p nên Claude Code chờ input tương tác", "Thiếu .mcp.json", "CLAUDE.md quá dài", "Model đang quá tải"],
+              options: ["Thiếu cờ -p nên Claude Code chờ nhập liệu", "Thiếu file .mcp.json nên Claude Code chờ kết nối", "CLAUDE.md quá dài nên Claude Code nạp mãi không xong", "Model đang quá tải nên request bị xếp hàng"],
+              en: { q: "A CI job that calls Claude Code hangs forever. What is the most likely cause?", options: ["The -p flag is missing, so Claude Code waits for interactive input", ".mcp.json is missing, so Claude Code waits for a connection", "CLAUDE.md is so long that loading never finishes", "The model is overloaded, so the request is queued"] },
               answer: 0,
               explain: "-p (--print) chạy một lần và thoát, phù hợp với pipeline.",
             },
             {
               q: "Bot review trên PR lặp lại các comment cũ mỗi lần có commit mới. Cách khắc phục?",
-              options: ["Tắt bot sau lần chạy đầu", "Đưa các phát hiện trước đó vào ngữ cảnh, yêu cầu chỉ báo vấn đề mới hoặc chưa được sửa", "Dùng model nhỏ hơn", "Chỉ chạy bot vào cuối tuần"],
+              options: ["Chỉ chạy bot ở commit đầu tiên của mỗi PR", "Đưa phát hiện cũ vào ngữ cảnh, chỉ báo vấn đề mới hoặc chưa sửa", "Đổi sang model nhỏ hơn để bot bớt nói nhiều", "Xóa toàn bộ comment cũ của bot trước mỗi lần chạy để PR luôn chỉ có comment mới nhất"],
+              en: { q: "A PR review bot repeats its old comments every time a new commit is pushed. How do you fix it?", options: ["Only run the bot on the first commit of each PR", "Include earlier findings in context and report only new or unfixed issues", "Switch to a smaller model so the bot says less", "Delete all the bot's old comments before each run so the PR only shows the latest ones"] },
               answer: 1,
               explain: "Cho reviewer biết những gì đã báo để nó tập trung vào thay đổi mới.",
             },
@@ -850,6 +982,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
       id: "d4",
       num: 4,
       title: "Prompt Engineering & Structured Output",
+      vi: "Viết prompt & đầu ra có cấu trúc",
       short: "Prompt & Output",
       weight: 20,
       color: "blue",
@@ -858,6 +991,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
         {
           id: "4-1",
           title: "Tiêu chí rõ ràng thay vì chỉ dẫn mơ hồ",
+          goals: ["Viết tiêu chí cụ thể thay cho tính từ chung chung như “quan trọng”", "Hiểu vì sao báo sai quá nhiều làm người dùng bỏ qua cả phát hiện đúng", "Tạm tắt nhóm phát hiện gây nhiễu trong lúc tinh chỉnh"],
           widget: "criteriaRewrite",
           body: `
 <p class="lead"><b>Hình dung:</b> dặn nhân viên mới “làm cẩn thận vào nhé” thì họ vẫn không biết cẩn thận ở chỗ nào. Đưa họ một danh sách “kiểm tra ba điều này, bỏ qua hai điều kia” thì kết quả khác hẳn.</p>
@@ -879,11 +1013,12 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
             {
               q: "Bot review báo quá nhiều 'vấn đề style' không quan trọng, developer bắt đầu phớt lờ cả lỗi bảo mật. Cách tốt nhất?",
               options: [
-                "Thêm 'chỉ báo vấn đề quan trọng' vào prompt",
-                "Định nghĩa tiêu chí cụ thể cho từng hạng mục cần báo, tạm tắt hạng mục style trong lúc tinh chỉnh",
-                "Tăng số comment để không bỏ sót",
-                "Chuyển sang review thủ công hoàn toàn",
+                "Thêm 'chỉ báo vấn đề quan trọng' vào prompt của bot",
+                "Định nghĩa tiêu chí cụ thể cho từng loại cần báo, tạm tắt mục style",
+                "Tăng số comment để chắc chắn không bỏ sót lỗi bảo mật",
+                "Chuyển hẳn sang review thủ công cho tới khi có model mới tốt hơn rồi mới bật lại bot",
               ],
+              en: { q: "A review bot reports too many unimportant 'style issues', and developers start ignoring even the security findings. What is the best fix?", options: ["Add 'only report important issues' to the bot's prompt", "Define concrete criteria for each category to report and pause the style category", "Increase the number of comments so no security issue is missed", "Switch entirely to manual review until a better model comes out, then turn the bot back on"] },
               answer: 1,
               explain: "Tiêu chí tường minh giảm false positive; tạm tắt hạng mục nhiễu giúp khôi phục niềm tin.",
             },
@@ -892,6 +1027,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
         {
           id: "4-2",
           title: "Few-shot prompting",
+          goals: ["Biết few-shot là gì và khi nào nên dùng", "Chọn ví dụ nhắm vào những trường hợp khó, ở ranh giới", "Kèm lý do trong ví dụ để model hiểu cách quyết định"],
           widget: "fewShot",
           body: `
 <p class="lead"><b>Hình dung:</b> dạy người mới phân loại thư khiếu nại, đưa họ xem ba lá thư khó đã được phân loại sẵn, kèm giải thích vì sao xếp vào nhóm đó, thì hiệu quả hơn nhiều so với đọc bản hướng dẫn mười trang.</p>
@@ -914,11 +1050,12 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
             {
               q: "Agent phân loại ticket xử lý tốt ca rõ ràng nhưng không nhất quán với ca mơ hồ (vừa là billing vừa là bug). Cải thiện tốt nhất?",
               options: [
-                "Thêm 3 ví dụ ca mơ hồ kèm lý giải vì sao chọn nhãn đó",
-                "Thêm 50 ví dụ ca rõ ràng",
-                "Tăng temperature",
-                "Viết hoa chỉ dẫn phân loại",
+                "Thêm 3 ví dụ ca mơ hồ kèm lý do chọn nhãn",
+                "Thêm 50 ví dụ ca rõ ràng cho mỗi nhãn",
+                "Tăng temperature để model linh hoạt hơn",
+                "Viết hoa hướng dẫn phân loại cho model chú ý",
               ],
+              en: { q: "A ticket-classification agent handles clear cases well but is inconsistent on ambiguous ones (both billing and bug). What is the best improvement?", options: ["Add 3 ambiguous examples with the reasoning for the chosen label", "Add 50 clear-cut examples for each label", "Raise temperature so the model is more flexible", "Write the classification instructions in capitals"] },
               answer: 0,
               explain: "Ví dụ có mục tiêu cho ca mơ hồ, có lý do, giúp model khái quát quyết định.",
             },
@@ -927,6 +1064,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
         {
           id: "4-3",
           title: "Structured output với tool_use & JSON schema",
+          goals: ["Dùng JSON schema để có đầu ra đúng cấu trúc", "Biết schema chống được lỗi cú pháp nhưng không chống được lỗi về nghĩa", "Thiết kế trường nullable và giá trị “other” để model không phải bịa"],
           widget: "schemaDemo",
           body: `
 <p class="lead"><b>Hình dung:</b> cho người khác điền một tờ đơn có sẵn các ô thì dữ liệu nhận về gọn gàng hơn nhiều so với bảo họ “viết ra giấy”. JSON schema chính là tờ đơn có sẵn ô. Nhưng tờ đơn chỉ đảm bảo mọi ô được điền đúng chỗ, chứ không đảm bảo nội dung điền vào là đúng sự thật.</p>
@@ -950,17 +1088,19 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
             {
               q: "Pipeline trích xuất hợp đồng thường điền ngày gia hạn giả khi hợp đồng không có điều khoản gia hạn. Nguyên nhân và cách sửa?",
               options: [
-                "Model quá sáng tạo; giảm temperature",
-                "Trường renewal_date là required; đổi thành nullable để model trả null khi không có",
-                "Cần thêm OCR tốt hơn",
-                "Chuyển sang Batch API",
+                "Model quá sáng tạo; giảm temperature xuống 0",
+                "renewal_date đang bắt buộc; cho phép null khi không có",
+                "Chất lượng OCR kém; cần công cụ OCR tốt hơn",
+                "Cần thêm ví dụ hợp đồng có ngày gia hạn vào prompt",
               ],
+              en: { q: "A contract-extraction pipeline often fills in a fake renewal date when the contract has no renewal clause. What is the cause and fix?", options: ["The model is too creative; set temperature to 0", "renewal_date is required; make it nullable for when it is absent", "OCR quality is poor; use a better OCR tool", "Add more example contracts that have renewal dates to the prompt"] },
               answer: 1,
               explain: "Trường bắt buộc ép model phải điền gì đó; nullable cho phép thể hiện 'không có thông tin'.",
             },
             {
               q: "Dùng tool_use với JSON schema đảm bảo điều gì?",
-              options: ["Giá trị luôn đúng ngữ nghĩa", "Output đúng cú pháp và cấu trúc schema", "Không bao giờ có ảo giác", "Tổng các dòng luôn khớp"],
+              options: ["Giá trị trong từng trường luôn đúng ý nghĩa", "Output đúng cú pháp và đúng cấu trúc schema", "Model không bao giờ bịa ra thông tin", "Các con số cộng lại luôn khớp với tổng"],
+              en: { q: "What does using tool_use with a JSON schema guarantee?", options: ["Every field's value is semantically correct", "The output is syntactically valid and matches the schema structure", "The model never makes up information", "Line items always add up to the total"] },
               answer: 1,
               explain: "Schema đảm bảo cấu trúc, còn tính đúng của giá trị cần kiểm tra thêm.",
             },
@@ -969,6 +1109,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
         {
           id: "4-4",
           title: "Vòng kiểm tra hợp lệ & thử lại",
+          goals: ["Thử lại kèm mô tả lỗi cụ thể để model tự sửa", "Nhận ra khi nào thử lại là vô ích vì thông tin không tồn tại", "Cho model tự kiểm tra, ví dụ so tổng tự cộng với tổng ghi trên giấy"],
           widget: "retryLoop",
           body: `
 <p class="lead"><b>Hình dung:</b> trả bài cho học sinh và chỉ nói “làm lại đi” thì em đó không biết sai ở đâu. Gạch chân chỗ sai và ghi “ngày phải viết theo dạng năm-tháng-ngày” thì lần sau em sửa được ngay. Nhưng nếu đề bài vốn không có dữ kiện đó, bắt làm lại bao nhiêu lần cũng vô ích.</p>
@@ -991,11 +1132,12 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
             {
               q: "Pipeline retry nhiều lần nhưng vẫn không trích được số PO từ một số hóa đơn. Kiểm tra cho thấy các hóa đơn đó không ghi số PO. Hướng xử lý?",
               options: [
-                "Tăng số lần retry lên 10",
-                "Cho trường PO nullable và gắn cờ để người duyệt, vì retry không thể tạo ra thông tin không tồn tại",
-                "Đổi sang model lớn hơn",
-                "Bịa số PO theo định dạng chuẩn",
+                "Tăng số lần retry lên 10, kèm thông báo lỗi chi tiết hơn",
+                "Cho trường PO nhận null và gắn cờ để người duyệt",
+                "Đổi sang model lớn hơn để đọc hóa đơn kỹ hơn",
+                "Tạo số PO tạm theo định dạng chuẩn để không thiếu trường",
               ],
+              en: { q: "A pipeline retries many times but still cannot extract the PO number from some invoices. Inspection shows those invoices have no PO number at all. What should you do?", options: ["Raise retries to 10 with more detailed error messages", "Make the PO field nullable and flag the document for human review", "Switch to a larger model so it reads invoices more carefully", "Generate a placeholder PO number in the standard format so the field is never empty"] },
               answer: 1,
               explain: "Retry chỉ hữu ích khi lỗi nằm ở cách model trích xuất, không phải khi dữ liệu vắng mặt.",
             },
@@ -1004,6 +1146,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
         {
           id: "4-5",
           title: "Message Batches API",
+          goals: ["Biết Message Batches API rẻ hơn bao nhiêu và chậm tới mức nào", "Chọn đúng việc nên chạy batch và việc phải gọi trực tiếp", "Dùng custom_id để ghép kết quả và gửi lại phần bị lỗi"],
           widget: "batchDecider",
           body: `
 <p class="lead"><b>Hình dung:</b> gửi thư nhanh thì đắt nhưng tới ngay. Gửi thư thường thì rẻ một nửa nhưng có thể mất cả ngày. Báo cáo cần nộp sáng mai thì gửi thường cũng được; tài liệu người ta đang đứng chờ thì phải gửi nhanh.</p>
@@ -1028,13 +1171,15 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
           quiz: [
             {
               q: "Team muốn giảm chi phí cho (A) check pre-merge mà dev chờ và (B) audit bảo mật chạy hằng đêm. Phương án đúng?",
-              options: ["Batch cho cả hai", "Batch cho B, giữ gọi đồng bộ cho A", "Batch cho A, đồng bộ cho B", "Không dùng Batch cho cái nào"],
+              options: ["Dùng Batch cho cả hai để tiết kiệm tối đa", "Batch cho B, giữ gọi đồng bộ cho A", "Batch cho A, giữ gọi đồng bộ cho B", "Không dùng Batch cho việc nào cả"],
+              en: { q: "A team wants to cut costs for (A) a pre-merge check developers wait on and (B) a nightly security audit. Which plan is right?", options: ["Use Batch for both to save the most", "Batch for B, keep synchronous calls for A", "Batch for A, keep synchronous calls for B", "Use Batch for neither"] },
               answer: 1,
               explain: "Batch có thể mất tới 24 giờ — chỉ hợp với tác vụ không ai đang chờ.",
             },
             {
               q: "100 trong 10.000 request batch thất bại do tài liệu quá dài. Cách xử lý hiệu quả?",
-              options: ["Gửi lại toàn bộ 10.000 request", "Dùng custom_id xác định 100 request lỗi, chia nhỏ tài liệu và gửi lại riêng chúng", "Bỏ qua 100 tài liệu", "Chuyển cả pipeline sang đồng bộ"],
+              options: ["Gửi lại toàn bộ 10.000 request trong một batch mới để kết quả đồng bộ, dễ đối chiếu", "Dùng custom_id tìm 100 request lỗi, chia nhỏ tài liệu rồi gửi lại", "Bỏ qua 100 tài liệu vì chỉ chiếm 1%", "Chuyển cả pipeline sang gọi đồng bộ cho chắc"],
+              en: { q: "100 of 10,000 batch requests failed because the documents were too long. What is the efficient way to handle this?", options: ["Resubmit all 10,000 requests in a new batch so results are consistent and easy to reconcile", "Use custom_id to find the 100 failures, chunk those documents and resubmit them", "Skip the 100 documents since they are only 1%", "Move the whole pipeline to synchronous calls to be safe"] },
               answer: 1,
               explain: "custom_id cho phép xử lý lại chính xác phần thất bại.",
             },
@@ -1043,6 +1188,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
         {
           id: "4-6",
           title: "Review nhiều instance & nhiều lượt",
+          goals: ["Hiểu vì sao để phiên viết code tự review thì ít tìm ra lỗi", "Chia review thành từng file và một lượt xem liên kết giữa các file", "Dùng mức độ tự tin để quyết định ai xử lý tiếp"],
           widget: "multiPass",
           body: `
 <p class="lead"><b>Hình dung:</b> tự đọc lại bài văn mình vừa viết, bạn thường không thấy lỗi vì đầu vẫn nghĩ đúng điều mình định viết. Nhờ một người khác đọc thì họ thấy ngay. Claude cũng vậy.</p>
@@ -1061,7 +1207,8 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
           quiz: [
             {
               q: "Code do Claude sinh ra được chính phiên đó review và hầu như không phát hiện lỗi, nhưng QA tìm ra nhiều bug. Cải thiện tốt nhất?",
-              options: ["Yêu cầu phiên đó 'review kỹ hơn'", "Dùng instance Claude riêng, không có ngữ cảnh sinh code, để review", "Bật extended thinking trong cùng phiên", "Bỏ bước review"],
+              options: ["Yêu cầu chính phiên đó review lại kỹ hơn lần nữa", "Dùng một phiên Claude riêng, không có ngữ cảnh sinh code, để review", "Bật extended thinking trong cùng phiên rồi yêu cầu review lại từng hàm một cách kỹ lưỡng", "Bỏ bước review, để QA kiểm tra là đủ"],
+              en: { q: "Code generated by Claude is reviewed by the same session and almost no bugs are found, yet QA finds many. What is the best improvement?", options: ["Ask the same session to review again more carefully", "Use a separate Claude instance, without the generation context, to review", "Enable extended thinking in the same session and ask it to re-review every function carefully", "Drop the review step and let QA handle it"] },
               answer: 1,
               explain: "Reviewer độc lập không bị neo vào lập luận đã dùng khi sinh code.",
             },
@@ -1083,6 +1230,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
       id: "d5",
       num: 5,
       title: "Context Management & Reliability",
+      vi: "Quản lý ngữ cảnh & độ tin cậy",
       short: "Ngữ cảnh & Tin cậy",
       weight: 15,
       color: "rose",
@@ -1091,6 +1239,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
         {
           id: "5-1",
           title: "Giữ thông tin quan trọng trong ngữ cảnh dài",
+          goals: ["Nhận ra ba cách thông tin quan trọng bị mất trong hội thoại dài", "Giữ khối case facts nguyên văn ở đầu ngữ cảnh", "Cắt gọn kết quả công cụ trước khi đưa vào hội thoại"],
           widget: "contextWindow",
           body: `
 <p class="lead"><b>Hình dung:</b> ghi biên bản một cuộc họp dài bằng cách tóm tắt dần, cuối cùng bạn có “khách muốn được hoàn tiền” nhưng mất con số 1.250.000 đồng và ngày giao dịch. Giải pháp là ghi các con số quan trọng vào một tờ riêng, không bao giờ tóm tắt tờ đó.</p>
@@ -1112,11 +1261,12 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
             {
               q: "Sau hội thoại dài, agent hỗ trợ nhắc sai số tiền và ngày giao dịch khách cung cấp ban đầu. Hệ thống dùng tóm tắt lũy tiến. Cách sửa tốt nhất?",
               options: [
-                "Tóm tắt thường xuyên hơn",
-                "Trích các dữ kiện giao dịch vào khối 'case facts' cố định đưa vào mọi prompt",
-                "Yêu cầu khách nhắc lại thông tin",
-                "Dùng model có context lớn hơn mà không đổi gì khác",
+                "Tóm tắt thường xuyên hơn để bản tóm tắt luôn mới",
+                "Đưa dữ kiện giao dịch vào khối 'case facts' có trong mọi prompt",
+                "Yêu cầu khách nhắc lại thông tin mỗi khi cần",
+                "Đổi sang model có context lớn hơn để giữ được nhiều lượt hơn, giữ nguyên cách tóm tắt",
               ],
+              en: { q: "After a long conversation, a support agent misstates the amount and transaction date the customer gave at the start. The system uses progressive summarization. What is the best fix?", options: ["Summarize more often so the summary stays fresh", "Extract the transaction facts into a 'case facts' block included in every prompt", "Ask the customer to repeat the information whenever needed", "Switch to a model with a larger context to keep more turns, with the same summarization"] },
               answer: 1,
               explain: "Dữ kiện chính xác được giữ nguyên văn, không bị tóm tắt làm mờ.",
             },
@@ -1125,6 +1275,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
         {
           id: "5-2",
           title: "Escalation & xử lý mơ hồ",
+          goals: ["Biết những tín hiệu đáng tin để chuyển cho nhân viên thật", "Không dựa vào điểm cảm xúc hay độ tự tin model tự báo", "Xử lý khi tìm ra nhiều khách hàng trùng tên"],
           widget: "escalation",
           body: `
 <p class="lead"><b>Hình dung:</b> nhân viên tổng đài giỏi biết lúc nào nên tự giải quyết, lúc nào nên hỏi thêm khách, và lúc nào nên chuyển máy cho cấp trên. Khách nói to không có nghĩa là vấn đề khó; khách hỏi lịch sự vẫn có thể là ca vượt quá thẩm quyền.</p>
@@ -1148,13 +1299,15 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
           quiz: [
             {
               q: "Khách viết: 'Tôi muốn nói chuyện với nhân viên.' Vấn đề có vẻ agent tự giải quyết được. Agent nên?",
-              options: ["Cố giải quyết trước rồi mới chuyển", "Chuyển cho người thật ngay theo yêu cầu", "Hỏi lý do vì sao khách muốn gặp người", "Phớt lờ và tiếp tục"],
+              options: ["Cố giải quyết trước, nếu không được mới chuyển", "Chuyển cho nhân viên ngay như khách yêu cầu", "Hỏi khách vì sao muốn gặp nhân viên", "Giải thích rằng agent cũng xử lý được"],
+              en: { q: "A customer writes: 'I want to talk to a human.' The issue looks like something the agent could solve. What should the agent do?", options: ["Try to solve it first, and only hand over if that fails", "Hand over to a human right away, as requested", "Ask the customer why they want a human", "Explain that the agent can handle it too"] },
               answer: 1,
               explain: "Yêu cầu rõ ràng gặp người thật cần được tôn trọng ngay.",
             },
             {
               q: "get_customer trả về 3 khách cùng tên. Agent nên?",
-              options: ["Chọn khách có đơn gần nhất", "Hỏi thêm thông tin định danh (email, mã đơn)", "Chọn ngẫu nhiên", "Escalate ngay"],
+              options: ["Chọn khách có đơn hàng gần đây nhất", "Hỏi thêm thông tin định danh như email, mã đơn", "Chọn khách đầu tiên trong danh sách trả về", "Chuyển ngay cho nhân viên vì dữ liệu không rõ"],
+              en: { q: "get_customer returns 3 customers with the same name. What should the agent do?", options: ["Pick the customer with the most recent order", "Ask for more identifying details such as email or order ID", "Pick the first customer in the returned list", "Escalate to a human immediately because the data is unclear"] },
               answer: 1,
               explain: "Đoán bằng heuristic có thể thao tác nhầm tài khoản.",
             },
@@ -1163,6 +1316,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
         {
           id: "5-3",
           title: "Lan truyền lỗi trong hệ thống đa agent",
+          goals: ["Báo lỗi có cấu trúc kèm phần kết quả đã thu được", "Tránh hai cách làm sai: nuốt lỗi và dừng cả hệ thống", "Ghi rõ trong báo cáo cuối phần nào đang thiếu dữ liệu"],
           widget: "errorPropagation",
           body: `
 <p class="lead"><b>Hình dung:</b> giao năm người đi khảo sát năm cửa hàng, một người không vào được vì cửa hàng đóng cửa. Người đó nên báo “cửa hàng số 5 đóng cửa, tôi đã thử hai lần, có thể qua chi nhánh gần đó”, chứ không phải im lặng nộp tờ giấy trắng, cũng không phải hủy luôn cả cuộc khảo sát.</p>
@@ -1189,11 +1343,12 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
             {
               q: "Subagent tìm kiếm timeout với 1 trong 5 nguồn. Hành vi tốt nhất?",
               options: [
-                "Trả về danh sách rỗng đánh dấu thành công",
-                "Hủy toàn bộ tác vụ nghiên cứu",
-                "Trả kết quả từ 4 nguồn + lỗi có cấu trúc về nguồn thứ 5 (loại lỗi, truy vấn, phương án thay thế)",
-                "Thử lại vô hạn",
+                "Trả về danh sách rỗng và đánh dấu thành công",
+                "Hủy toàn bộ tác vụ nghiên cứu và báo lỗi",
+                "Trả kết quả 4 nguồn kèm lỗi có cấu trúc cho nguồn thứ 5",
+                "Thử lại nguồn thứ 5 nhiều lần cho tới khi thành công rồi mới trả kết quả",
               ],
+              en: { q: "A search subagent times out on 1 of 5 sources. What is the best behavior?", options: ["Return an empty list and mark it as success", "Cancel the whole research task and report an error", "Return results from 4 sources plus a structured error for the 5th", "Retry the 5th source repeatedly until it succeeds, then return results"] },
               answer: 2,
               explain: "Coordinator có đủ thông tin để quyết định phục hồi, báo cáo cuối ghi chú được phần thiếu.",
             },
@@ -1202,6 +1357,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
         {
           id: "5-4",
           title: "Khám phá codebase lớn",
+          goals: ["Nhận ra dấu hiệu ngữ cảnh đang quá tải trong phiên dài", "Ghi phát hiện ra file và giao việc khảo sát cho subagent", "Dùng /compact và file trạng thái để tiếp tục khi bị gián đoạn"],
           widget: "longSession",
           body: `
 <p class="lead"><b>Hình dung:</b> đọc liền hai trăm trang tài liệu mà không ghi chép, tới trang cuối bạn chỉ còn nhớ mang máng “có mấy class xử lý thanh toán”. Người làm việc hiệu quả sẽ ghi chép trong lúc đọc và nhờ người khác tra cứu giúp những phần phụ.</p>
@@ -1225,11 +1381,12 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
             {
               q: "Sau 2 giờ khám phá codebase lớn, Claude bắt đầu trả lời chung chung, không nhắc các class đã phân tích. Giải pháp hợp lý?",
               options: [
-                "Tiếp tục hỏi lại chi tiết",
-                "Ghi phát hiện ra file scratchpad, dùng /compact hoặc phiên mới và ủy thác điều tra cụ thể cho subagent",
-                "Đọc lại toàn bộ codebase",
-                "Tăng max_tokens",
+                "Tiếp tục hỏi lại từng chi tiết cho tới khi Claude nhớ ra",
+                "Ghi phát hiện ra file, /compact hoặc mở phiên mới, giao việc cho subagent",
+                "Cho Claude đọc lại toàn bộ codebase từ đầu để nạp lại những class đã phân tích trước đó",
+                "Tăng max_tokens để Claude trả lời chi tiết hơn",
               ],
+              en: { q: "After 2 hours exploring a large codebase, Claude starts giving generic answers and no longer mentions classes it analyzed. What is a sensible fix?", options: ["Keep asking about each detail until Claude remembers", "Write findings to a file, /compact or start fresh, and delegate to subagents", "Have Claude re-read the entire codebase to reload the classes it analyzed earlier", "Raise max_tokens so Claude answers in more detail"] },
               answer: 1,
               explain: "Giữ phát hiện ngoài ngữ cảnh và cô lập output khám phá là cách chống suy giảm ngữ cảnh.",
             },
@@ -1238,6 +1395,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
         {
           id: "5-5",
           title: "Người duyệt & hiệu chỉnh độ tin cậy",
+          goals: ["Hiểu vì sao độ chính xác tổng có thể che giấu chỗ yếu", "Đo riêng theo loại tài liệu và theo từng trường", "Lấy mẫu phân tầng trước khi giảm bớt người kiểm tra"],
           widget: "stratified",
           body: `
 <p class="lead"><b>Hình dung:</b> một lớp học có điểm trung bình 9, nghe rất tốt. Nhưng nếu xem từng môn thì môn Hóa chỉ được 4. Con số trung bình đẹp đã che mất chỗ yếu.</p>
@@ -1261,11 +1419,12 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
             {
               q: "Pipeline trích xuất đạt 97% chính xác tổng. Quản lý muốn bỏ hoàn toàn bước người duyệt. Nên làm gì trước?",
               options: [
-                "Bỏ ngay vì 97% là đủ",
-                "Đánh giá độ chính xác theo từng loại tài liệu và trường, lấy mẫu phân tầng, rồi mới giảm duyệt cho các nhóm đã chứng minh tốt",
-                "Tăng gấp đôi người duyệt",
-                "Chuyển sang model khác",
+                "Bỏ ngay, vì 97% đã cao hơn độ chính xác của người duyệt",
+                "Đo độ chính xác theo từng loại tài liệu và trường bằng mẫu phân tầng trước",
+                "Tăng gấp đôi người duyệt để chắc chắn hơn",
+                "Thử model khác và chỉ bỏ bước người duyệt khi độ chính xác tổng vượt 99% trong một tháng",
               ],
+              en: { q: "An extraction pipeline reaches 97% overall accuracy. A manager wants to remove the human review step entirely. What should you do first?", options: ["Remove it now, since 97% beats the reviewers' own accuracy", "Measure accuracy per document type and field with stratified sampling first", "Double the number of reviewers to be safer", "Try another model and only drop human review once overall accuracy exceeds 99% for a month"] },
               answer: 1,
               explain: "Một loại tài liệu hiếm có thể chỉ đạt 60% nhưng bị che bởi con số tổng.",
             },
@@ -1274,6 +1433,7 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
         {
           id: "5-6",
           title: "Nguồn gốc thông tin (provenance)",
+          goals: ["Giữ liên kết giữa mỗi nhận định và nguồn của nó qua mọi bước", "Trình bày số liệu mâu thuẫn thay vì tự chọn một", "Ghi ngày tháng để giải thích khác biệt do thời điểm"],
           widget: "provenance",
           body: `
 <p class="lead"><b>Hình dung:</b> bài báo viết “theo một nghiên cứu, 43% doanh nghiệp đã dùng AI” mà không ghi nghiên cứu nào, năm nào. Bạn không có cách nào kiểm tra lại. Trong hệ thống nhiều agent, mỗi lần tóm tắt là một lần thông tin nguồn có nguy cơ bị rơi mất.</p>
@@ -1295,7 +1455,8 @@ Mỗi test mô tả một hành vi của người dùng.</code></pre>
           quiz: [
             {
               q: "Hai báo cáo uy tín đưa tỷ lệ áp dụng AI khác nhau (34% và 52%). Subagent tổng hợp nên?",
-              options: ["Lấy trung bình 43%", "Chọn số lớn hơn", "Trình bày cả hai, ghi nguồn và ngày, chú thích khác biệt phương pháp nếu có", "Bỏ số liệu khỏi báo cáo"],
+              options: ["Lấy trung bình 43% để cân bằng hai nguồn", "Chọn số của báo cáo có thương hiệu lớn hơn, vì thường có phương pháp tốt hơn", "Nêu cả hai, ghi nguồn, ngày và khác biệt phương pháp", "Bỏ số liệu khỏi báo cáo vì mâu thuẫn"],
+              en: { q: "Two reputable reports give different AI adoption rates (34% and 52%). What should the synthesis subagent do?", options: ["Average them to 43% to balance the two sources", "Use the figure from the better-known publisher, since its methodology is usually stronger", "Present both, with source, date and methodology differences", "Drop the figure from the report because they conflict"] },
               answer: 2,
               explain: "Giữ minh bạch nguồn gốc giúp người đọc tự đánh giá; tự ý gộp/chọn làm mất thông tin.",
             },

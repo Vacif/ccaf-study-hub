@@ -1,0 +1,43 @@
+# Bot review pull request bằng Claude Code (chạy không tương tác với cờ -p).
+# Đặt file này ở .github/workflows/ của repo khách, và thêm secret ANTHROPIC_API_KEY.
+name: Claude review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+# Quyền tối thiểu: chỉ đọc code và viết bình luận vào PR
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cài Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          claude -p "Review các thay đổi so với commit $BASE_SHA (dùng git diff). Làm theo tiêu chí trong .claude/commands/review.md." \
+            --allowedTools "Read,Grep,Glob,Bash(git diff:*)" \
+            --output-format json > review.json
+
+      - name: Đăng bình luận lên PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: jq -r '.result' review.json | gh pr comment "$PR_NUMBER" --body-file -
