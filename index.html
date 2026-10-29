@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CCA-F Study Hub</title>
+  <meta name="description" content="Ôn thi chứng chỉ Claude Certified Architect – Foundations (CCA-F) theo từng chương, có mô phỏng tương tác, quiz, flashcard và thi thử.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23c8642d'/><text x='16' y='21' font-size='12' font-weight='700' text-anchor='middle' fill='white' font-family='sans-serif'>CCA</text></svg>">
+</head>
+<body>
+  <header class="topbar">
+    <button class="icon-btn menu-btn" id="menuBtn" aria-label="Mở menu">☰</button>
+    <a class="brand" href="#/"><span class="brand-mark">CCA</span><span>CCA-F Study Hub</span></a>
+    <div class="spacer"></div>
+    <div class="top-progress"><span class="lbl">Tiến độ</span><div class="bar"><span id="topBar" style="width:0"></span></div><b id="topPct">0%</b></div>
+    <button class="icon-btn" id="themeBtn" aria-label="Đổi giao diện sáng/tối">◐</button>
+  </header>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="overlay" id="overlay"></div>
+    <main class="main"><div class="content" id="app"></div></main>
+  </div>
+  <script src="assets/js/content.js"></script>
+  <script src="assets/js/widgets.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
