@@ -1,40 +1,40 @@
 /* Mô phỏng chi tiết — Chương 2: Tool Design & MCP Integration */
 (function () {
-  const { trace, code, esc } = window.SIM;
+  const { trace, code } = window.SIM;
   const W = window.WIDGETS;
   const J = (o) => JSON.stringify(o);
 
-  /* ───────── 2-1 Claude chọn công cụ dựa vào description ───────── */
+  /* ───────── 2-1 Claude chọn công cụ dựa vào mô tả ───────── */
   W.toolSelectTrace = {
-    title: "Claude chọn công cụ thế nào? Mô tả mơ hồ vs rõ ràng",
+    title: "Claude chọn công cụ thế nào: mô tả sơ sài và mô tả rõ ràng",
     render: trace({
-      intro: "Claude không đọc code công cụ của bạn. Thứ duy nhất nó biết là <code>name</code>, <code>description</code> và <code>input_schema</code> trong request.",
+      intro: "Claude không đọc được code bên trong công cụ của bạn. Nó chỉ biết <b>tên</b>, <b>đoạn mô tả</b> và <b>danh sách tham số</b>. Đổi qua lại giữa hai kiểu mô tả để thấy lựa chọn của Claude thay đổi thế nào.",
       actors: [
         { id: "u", icon: "👤", name: "Khách" },
         { id: "b", icon: "🖥️", name: "Backend" },
         { id: "c", icon: "🧠", name: "Claude" },
-        { id: "t", icon: "🗄️", name: "CRM / Orders" },
+        { id: "t", icon: "🗄️", name: "Hệ thống nội bộ" },
       ],
-      stateTitle: "⏱️ Chi phí của lựa chọn",
-      controls: [{ id: "d", type: "select", label: "Description:", value: "vague", options: [["vague", "😶 Tối giản"], ["clear", "📝 Rõ ràng, có ranh giới"]] }],
+      stateTitle: "Số lượt đã tốn",
+      controls: [{ id: "d", type: "select", label: "Kiểu mô tả công cụ:", value: "vague", options: [["vague", "Sơ sài"], ["clear", "Rõ ràng, nêu ranh giới"]] }],
       steps: ({ d }) => {
         const vague = d === "vague";
         const tools = vague
           ? [{ name: "get_customer", description: "Lấy thông tin khách hàng.", input_schema: { type: "object", properties: { query: { type: "string" } } } }, { name: "lookup_order", description: "Lấy thông tin đơn.", input_schema: { type: "object", properties: { query: { type: "string" } } } }]
-          : [{ name: "get_customer", description: "Tra HỒ SƠ khách (tên, email, hạng) bằng email hoặc customer_id. Dùng để xác minh danh tính. KHÔNG trả trạng thái đơn/vận chuyển — dùng lookup_order cho việc đó.", input_schema: { type: "object", properties: { email: { type: "string", description: "Email đăng ký" }, customer_id: { type: "string", description: "Dạng C-123" } } } }, { name: "lookup_order", description: "Tra MỘT đơn bằng order_id (số sau dấu #, ví dụ #1234 → \"1234\"): trạng thái, vị trí vận chuyển, ngày giao dự kiến, số tiền. Dùng cho câu hỏi “đơn của tôi đâu”, “bao giờ giao”.", input_schema: { type: "object", properties: { order_id: { type: "string", description: "Chỉ chữ số, bỏ dấu #" } }, required: ["order_id"] } }];
+          : [{ name: "get_customer", description: "Tra HỒ SƠ khách (tên, email, hạng) bằng email hoặc mã khách. Dùng để xác minh danh tính. KHÔNG trả trạng thái đơn hay vận chuyển; việc đó dùng lookup_order.", input_schema: { type: "object", properties: { email: { type: "string", description: "Email đăng ký" }, customer_id: { type: "string", description: "Dạng C-123" } } } }, { name: "lookup_order", description: "Tra MỘT đơn bằng mã đơn (phần số sau dấu #, ví dụ #1234 thì nhập \"1234\"): trạng thái, vị trí vận chuyển, ngày giao dự kiến, số tiền. Dùng khi khách hỏi đơn đang ở đâu, bao giờ giao.", input_schema: { type: "object", properties: { order_id: { type: "string", description: "Chỉ gồm chữ số, bỏ dấu #" } }, required: ["order_id"] } }];
         const s = [];
-        s.push({ from: "u", to: "b", kind: "req", label: "💬", title: "Câu hỏi của khách", payload: { text: "Đơn #1234 của tôi giờ đang ở đâu vậy?" }, state: [] });
-        s.push({ from: "b", to: "c", kind: "req", label: "📤 tools", title: "Định nghĩa công cụ gửi kèm request", payload: { tools }, hl: ["description"], fields: [["description", vague ? "“Lấy thông tin khách hàng” vs “Lấy thông tin đơn” — đơn cũng là một phần “thông tin khách”, ranh giới mờ." : "Nêu rõ dùng khi nào, KHÔNG dùng khi nào, định dạng đầu vào."], ["input_schema", vague ? "Tham số chung chung <code>query</code> — không gợi ý dạng dữ liệu." : "Tham số có tên và mô tả riêng — Claude biết bỏ dấu #."]] });
-        s.push({ from: "c", to: "c", kind: "internal", title: "Claude so khớp câu hỏi với mô tả", desc: vague ? "“đơn của tôi” liên quan tới khách hàng… cả hai mô tả đều khớp mơ hồ. Lựa chọn trở nên ngẫu nhiên giữa các lần chạy." : "“đang ở đâu” khớp trực tiếp với “vị trí vận chuyển” của lookup_order; get_customer nói rõ không trả trạng thái đơn." });
+        s.push({ from: "u", to: "b", kind: "req", label: "câu hỏi", title: "Khách hỏi đơn hàng đang ở đâu", desc: "Đây là câu hỏi về vận chuyển, nên công cụ đúng là <code>lookup_order</code>.", payload: { text: "Đơn #1234 của tôi giờ đang ở đâu vậy?" }, state: [] });
+        s.push({ from: "b", to: "c", kind: "req", label: "danh sách công cụ", title: "Backend gửi câu hỏi kèm danh sách công cụ", desc: vague ? "Hai mô tả “Lấy thông tin khách hàng” và “Lấy thông tin đơn” na ná nhau, vì đơn hàng cũng là một phần “thông tin khách”. Tham số đều tên chung chung là <code>query</code>." : "Mỗi mô tả nói rõ công cụ làm gì, dùng khi nào và <b>không</b> dùng khi nào. Tham số có tên cụ thể và có hướng dẫn định dạng.", payload: { tools }, hl: ["description"] });
+        s.push({ from: "c", to: "c", kind: "internal", title: "Claude so câu hỏi với từng mô tả", desc: vague ? "Câu hỏi “đơn của tôi” khớp mơ hồ với cả hai mô tả. Lựa chọn trở nên may rủi, lần này có thể chọn đúng, lần sau chọn sai." : "Cụm “đang ở đâu” khớp thẳng với “vị trí vận chuyển” trong mô tả của <code>lookup_order</code>. Mô tả của <code>get_customer</code> còn nói rõ nó không trả trạng thái đơn." });
         if (vague) {
-          s.push({ from: "c", to: "b", kind: "err", label: "📥 get_customer", title: "Chọn nhầm công cụ", payload: { type: "tool_use", name: "get_customer", input: { query: "#1234" } }, push: [{ r: "err", t: "Lượt 1: get_customer — sai công cụ" }] });
-          s.push({ from: "b", to: "t", kind: "req", label: "🔎", title: "Backend chạy get_customer", payload: { query: "#1234" } });
-          s.push({ from: "t", to: "b", kind: "res", label: "👤 hồ sơ", title: "Trả hồ sơ khách — không có vị trí đơn", payload: { name: "Trần Lan", tier: "gold" } });
-          s.push({ from: "c", to: "b", kind: "warn", label: "📥 lookup_order", title: "Mất thêm một lượt để sửa sai", payload: { type: "tool_use", name: "lookup_order", input: { query: "#1234" } }, push: [{ r: "note", t: "Lượt 2: lookup_order (đầu vào còn dấu #)" }], warn: "Thêm độ trễ + token; ở ca khác Claude có thể trả lời luôn bằng dữ liệu sai." });
+          s.push({ from: "c", to: "b", kind: "err", label: "chọn nhầm", title: "Claude chọn nhầm công cụ", desc: "Claude gọi <code>get_customer</code>, và còn truyền nguyên chuỗi “#1234” vì không có hướng dẫn về định dạng.", payload: { type: "tool_use", name: "get_customer", input: { query: "#1234" } }, push: [{ r: "err", t: "Lượt 1: gọi get_customer (sai công cụ)" }] });
+          s.push({ from: "b", to: "t", kind: "req", label: "tra khách", title: "Backend chạy công cụ bị chọn nhầm", desc: "Backend làm theo yêu cầu và tra hồ sơ khách." });
+          s.push({ from: "t", to: "b", kind: "res", label: "hồ sơ", title: "Kết quả không có thông tin vận chuyển", desc: "Hồ sơ khách chỉ có tên và hạng thành viên, không giúp gì cho câu hỏi.", payload: { name: "Trần Lan", tier: "gold" } });
+          s.push({ from: "c", to: "b", kind: "warn", label: "chọn lại", title: "Phải tốn thêm một lượt để sửa", desc: "Claude nhận ra kết quả không trả lời được câu hỏi và gọi sang <code>lookup_order</code>. Khách phải chờ lâu hơn, chi phí cũng tăng. Ở những lần khác, Claude có thể trả lời luôn bằng thông tin sai.", payload: { type: "tool_use", name: "lookup_order", input: { query: "#1234" } }, push: [{ r: "note", t: "Lượt 2: gọi lookup_order (tham số vẫn còn dấu #)" }] });
         } else {
-          s.push({ from: "c", to: "b", kind: "ok", label: "📥 lookup_order", title: "Chọn đúng ngay lượt đầu, đầu vào đúng định dạng", payload: { type: "tool_use", name: "lookup_order", input: { order_id: "1234" } }, push: [{ r: "ok", t: "Lượt 1: lookup_order(\"1234\") — đúng" }] });
+          s.push({ from: "c", to: "b", kind: "ok", label: "chọn đúng", title: "Claude chọn đúng ngay lần đầu", desc: "Claude gọi <code>lookup_order</code> và truyền “1234”, đã bỏ dấu # theo đúng hướng dẫn trong mô tả tham số.", payload: { type: "tool_use", name: "lookup_order", input: { order_id: "1234" } }, push: [{ r: "ok", t: "Lượt 1: gọi lookup_order(\"1234\"), đúng ngay" }] });
         }
-        s.push({ from: "t", to: "c", kind: "ok", label: "📦 đơn", title: "Có dữ liệu cần thiết", payload: { status: "in_transit", location: "Bưu cục Q.3", eta: "2026-10-30" } });
+        s.push({ from: "t", to: "c", kind: "ok", label: "thông tin đơn", title: "Có thông tin cần thiết", desc: "Đơn đang ở bưu cục Quận 3, dự kiến giao ngày 30/10.", payload: { status: "in_transit", location: "Bưu cục Quận 3", eta: "2026-10-30" } });
         return s;
       },
     }),
@@ -43,184 +43,179 @@
   /* ───────── 2-2 Lỗi có cấu trúc qua MCP ───────── */
   const CATS = {
     transient: {
-      label: "⏱️ Transient (timeout)", input: { order_id: "1234" },
-      server: ["Gọi DB kho với timeout 5s → hết giờ.", "Đây là lỗi <b>tạm thời</b>: gọi lại sau ít giây có thể thành công."],
-      body: { errorCategory: "transient", isRetryable: true, retryAfterMs: 2000, message: "Kho dữ liệu đơn hàng không phản hồi sau 5s." },
-      next: { type: "tool_use", name: "mcp__orders__lookup_order", input: { order_id: "1234" } }, nextDesc: "Claude thử lại (có giới hạn số lần). Nếu vẫn lỗi: báo coordinator/khách kèm kết quả một phần.",
+      label: "Lỗi tạm thời (hết thời gian chờ)", input: { order_id: "1234" },
+      server: "Máy chủ gọi kho dữ liệu nhưng chờ quá 5 giây mà không có phản hồi. Đây là lỗi tạm thời, thử lại sau ít giây có thể thành công.",
+      body: { errorCategory: "transient", isRetryable: true, retryAfterMs: 2000, message: "Kho dữ liệu đơn hàng không phản hồi sau 5 giây." },
+      next: { type: "tool_use", name: "mcp__orders__lookup_order", input: { order_id: "1234" } }, nextDesc: "Claude chờ một chút rồi thử lại, có giới hạn số lần. Nếu vẫn lỗi, nó báo cho khách hoặc cho coordinator, kèm phần kết quả đã có.",
     },
     validation: {
-      label: "🧾 Validation (đầu vào sai)", input: { order_id: "abc" },
-      server: ["Kiểm tra định dạng: order_id phải là 4–8 chữ số.", "Lỗi do <b>đầu vào</b> → gọi lại y nguyên sẽ lỗi tiếp; phải sửa tham số."],
-      body: { errorCategory: "validation", isRetryable: true, field: "order_id", expected: "4–8 chữ số, ví dụ 1234", received: "abc", message: "order_id không hợp lệ." },
-      next: { type: "text", text: "Mã đơn “abc” có vẻ chưa đúng. Bạn kiểm tra lại giúp mình mã gồm 4–8 chữ số trong email xác nhận nhé?" }, nextDesc: "Claude hỏi lại người dùng để sửa đầu vào thay vì lặp lại lệnh lỗi.",
+      label: "Dữ liệu đầu vào sai", input: { order_id: "abc" },
+      server: "Máy chủ kiểm tra định dạng: mã đơn phải gồm 4 tới 8 chữ số, nhưng nhận được “abc”. Lỗi nằm ở đầu vào, nên gọi lại y nguyên sẽ vẫn lỗi.",
+      body: { errorCategory: "validation", isRetryable: true, field: "order_id", expected: "4 tới 8 chữ số, ví dụ 1234", received: "abc", message: "Mã đơn không hợp lệ." },
+      next: { type: "text", text: "Mã đơn “abc” có vẻ chưa đúng. Bạn kiểm tra giúp mình mã gồm 4 tới 8 chữ số trong email xác nhận nhé?" }, nextDesc: "Claude hỏi lại khách để có mã đúng, thay vì gọi lại công cụ với đầu vào sai.",
     },
     business: {
-      label: "📜 Business (vi phạm chính sách)", input: { order_id: "1234" },
-      server: ["Đơn giao cách đây 97 ngày; chính sách hoàn tiền 90 ngày.", "Không phải lỗi kỹ thuật — <b>thử lại vô ích</b>."],
+      label: "Vi phạm chính sách", input: { order_id: "1234" },
+      server: "Đơn đã giao cách đây 97 ngày, trong khi chính sách chỉ cho hoàn tiền trong 90 ngày. Đây không phải lỗi kỹ thuật, nên thử lại bao nhiêu lần cũng vô ích.",
       body: { errorCategory: "business", isRetryable: false, rule: "refund_window_90_days", days_since_delivery: 97, message: "Đơn đã quá hạn hoàn tiền 90 ngày.", customer_facing: "Đơn #1234 đã quá thời hạn hoàn tiền 90 ngày." },
-      next: { type: "text", text: "Rất tiếc, đơn #1234 đã quá hạn hoàn tiền 90 ngày (giao 97 ngày trước). Mình có thể hỗ trợ bảo hành hoặc chuyển bạn tới bộ phận chăm sóc đặc biệt." }, nextDesc: "Claude giải thích chính sách bằng thông điệp thân thiện, đề xuất phương án khác. Không retry.",
+      next: { type: "text", text: "Rất tiếc, đơn #1234 đã quá hạn hoàn tiền 90 ngày (giao cách đây 97 ngày). Mình có thể hỗ trợ bảo hành, hoặc chuyển bạn tới bộ phận chăm sóc đặc biệt." }, nextDesc: "Claude giải thích chính sách một cách nhẹ nhàng và đề xuất hướng khác. Không thử lại.",
     },
     permission: {
-      label: "🔒 Permission (không đủ quyền)", input: { order_id: "B2B-7781" },
-      server: ["Đơn thuộc tài khoản doanh nghiệp; token của agent chỉ có quyền khách lẻ.", "Agent không tự vượt quyền được → cần người có thẩm quyền."],
+      label: "Không đủ quyền", input: { order_id: "B2B-7781" },
+      server: "Đây là đơn của khách doanh nghiệp, trong khi agent chỉ có quyền xem đơn của khách lẻ. Agent không thể tự vượt quyền, cần người có thẩm quyền.",
       body: { errorCategory: "permission", isRetryable: false, required_role: "b2b_support", message: "Agent không có quyền xem đơn doanh nghiệp." },
-      next: { type: "tool_use", name: "escalate_to_human", input: { queue: "b2b_support", order_id: "B2B-7781", summary: "Khách hỏi trạng thái đơn B2B, agent không đủ quyền truy cập." } }, nextDesc: "Claude escalate tới đúng hàng đợi kèm tóm tắt.",
+      next: { type: "tool_use", name: "escalate_to_human", input: { queue: "b2b_support", order_id: "B2B-7781", summary: "Khách hỏi trạng thái đơn doanh nghiệp, agent không đủ quyền truy cập." } }, nextDesc: "Claude chuyển vụ việc cho bộ phận hỗ trợ doanh nghiệp, kèm bản tóm tắt.",
     },
     empty: {
-      label: "∅ Không có kết quả (hợp lệ)", input: { email: "lan@example.com" },
-      server: ["Truy vấn chạy thành công.", "Không có đơn nào khớp email này — đây là <b>dữ liệu</b>, không phải lỗi."],
-      ok: { orders: [], searched_by: "email", note: "Truy vấn thành công, không có đơn khớp." },
-      next: { type: "text", text: "Mình không thấy đơn nào gắn với lan@example.com. Có thể bạn đặt bằng email khác hoặc số điện thoại?" }, nextDesc: "Claude kết luận đúng “không có đơn” — không thử lại, không escalate.",
+      label: "Không có kết quả (hợp lệ)", input: { email: "lan@example.com" },
+      server: "Truy vấn chạy thành công, nhưng không có đơn nào gắn với email này. Đây là dữ liệu bình thường, không phải lỗi.",
+      ok: { orders: [], searched_by: "email", note: "Tìm kiếm thành công, không có đơn nào khớp." },
+      next: { type: "text", text: "Mình không thấy đơn nào gắn với lan@example.com. Có thể bạn đã đặt bằng email khác hoặc bằng số điện thoại?" }, nextDesc: "Claude kết luận đúng là không có đơn. Không thử lại, không chuyển cho người.",
     },
     protocol: {
-      label: "🧨 Lỗi giao thức (JSON-RPC)", input: { order_id: "1234" }, tool: "lookup_ordr",
-      server: ["Server không có công cụ tên <code>lookup_ordr</code> (danh sách công cụ của client đã cũ sau khi server đổi tên).", "Lỗi ở tầng <b>giao thức</b>, xảy ra trước khi chạy logic công cụ."],
+      label: "Lỗi giao thức (gọi sai tên công cụ)", input: { order_id: "1234" }, tool: "lookup_ordr",
+      server: "Máy chủ không có công cụ nào tên “lookup_ordr”. Danh sách công cụ phía client đã cũ sau khi máy chủ đổi tên công cụ. Lỗi này xảy ra ở tầng giao thức, trước khi công cụ kịp chạy.",
       rpcError: { code: -32602, message: "Unknown tool: lookup_ordr" },
-      next: { type: "text", text: "(Claude nhận tool_result lỗi chung chung, không phân loại được → có thể lặp lại hoặc bỏ cuộc.)" }, nextDesc: "Client chuyển lỗi giao thức thành tool_result lỗi. Cách sửa thực sự nằm ở hạ tầng: server gửi <code>notifications/tools/list_changed</code>, client gọi lại <code>tools/list</code>.",
+      next: { type: "text", text: "(Claude chỉ nhận được một thông báo lỗi chung chung, không biết vì sao, nên có thể thử lại vô ích hoặc bỏ cuộc.)" }, nextDesc: "Lỗi giao thức không mang thông tin để Claude tự xử lý. Phải sửa ở phía hạ tầng: máy chủ báo khi danh sách công cụ thay đổi, client lấy lại danh sách mới.",
     },
   };
   W.errorBuilder = {
-    title: "Phản hồi lỗi MCP — từ tools/call tới quyết định tiếp theo của Claude",
+    title: "Báo lỗi trong MCP: từ lời gọi công cụ tới quyết định tiếp theo của Claude",
     render: trace({
-      intro: "Cùng một lệnh <code>lookup_order</code>, sáu kết cục khác nhau. Chú ý cách <b>lỗi thực thi công cụ</b> (<code>result.isError</code>) khác <b>lỗi giao thức</b> (<code>error</code> của JSON-RPC), và Claude phản ứng ra sao với từng loại.",
+      intro: "Cùng một lệnh tra đơn hàng, nhưng có sáu kết cục khác nhau. Chọn từng tình huống để xem máy chủ nên trả về gì, và Claude phản ứng ra sao khi được báo lỗi rõ ràng.",
       actors: [
         { id: "c", icon: "🧠", name: "Claude" },
-        { id: "h", icon: "🖥️", name: "MCP client", sub: "Claude Code / SDK" },
-        { id: "s", icon: "🔌", name: "MCP server", sub: "orders" },
+        { id: "h", icon: "🖥️", name: "MCP client", sub: "Claude Code hoặc SDK" },
+        { id: "s", icon: "🔌", name: "Máy chủ MCP", sub: "orders" },
         { id: "d", icon: "🗄️", name: "Kho dữ liệu" },
       ],
       controls: [{ id: "k", type: "select", label: "Tình huống:", value: "transient", options: Object.entries(CATS).map(([k, v]) => [k, v.label]) }],
       steps: ({ k }) => {
         const c = CATS[k], tool = c.tool || "lookup_order";
         const s = [];
-        s.push({ from: "c", to: "h", kind: "res", label: "📥 tool_use", title: "Claude yêu cầu tra đơn", payload: { type: "tool_use", id: "toolu_21", name: "mcp__orders__" + tool, input: c.input }, hl: ["name", "input"] });
-        s.push({ from: "h", to: "s", kind: "req", label: "📤 tools/call", title: "Client chuyển thành JSON-RPC tools/call", sub: "stdio / HTTP", payload: { jsonrpc: "2.0", id: 42, method: "tools/call", params: { name: tool, arguments: c.input } }, hl: ["method", "name", "arguments"], fields: [["jsonrpc / id", "Chuẩn JSON-RPC 2.0; <code>id</code> để ghép response."], ["method: tools/call", "Gọi công cụ. (tools/list để liệt kê, resources/read để đọc tài nguyên.)"], ["params.name", "Tên gốc trên server — tiền tố <code>mcp__orders__</code> chỉ có ở phía client."], ["params.arguments", "Đúng là <code>tool_use.input</code> của Claude."]] });
-        if (!c.rpcError) s.push({ from: "s", to: "d", kind: "req", label: "🔎 truy vấn", title: "Server chạy logic công cụ", backend: c.server });
-        else s.push({ from: "s", to: "s", kind: "err", title: "Server không tìm thấy công cụ", backend: c.server });
+        s.push({ from: "c", to: "h", kind: "res", label: "xin tra đơn", title: "Claude xin tra cứu đơn hàng", desc: "Claude gọi công cụ tra đơn. Trong Claude Code, công cụ đến từ máy chủ MCP có tên đầy đủ bắt đầu bằng <code>mcp__orders__</code>.", payload: { type: "tool_use", id: "toolu_21", name: "mcp__orders__" + tool, input: c.input }, hl: ["name", "input"] });
+        s.push({ from: "h", to: "s", kind: "req", label: "tools/call", title: "Client chuyển yêu cầu sang máy chủ MCP", sub: "JSON-RPC", desc: "Client đóng gói yêu cầu theo chuẩn JSON-RPC rồi gửi cho máy chủ. Lúc này tên công cụ không còn tiền tố <code>mcp__orders__</code>, vì đó chỉ là cách client đặt tên.", payload: { jsonrpc: "2.0", id: 42, method: "tools/call", params: { name: tool, arguments: c.input } }, hl: ["method", "name", "arguments"], fields: [["jsonrpc, id", "Theo chuẩn JSON-RPC 2.0. Mã id dùng để ghép câu trả lời với đúng câu hỏi."], ["method: tools/call", "Yêu cầu chạy một công cụ."], ["params.name", "Tên công cụ theo cách máy chủ đặt."], ["params.arguments", "Chính là tham số Claude đã điền."]] });
+        if (!c.rpcError) s.push({ from: "s", to: "d", kind: "req", label: "truy vấn", title: "Máy chủ chạy công cụ", desc: c.server });
+        else s.push({ from: "s", to: "s", kind: "err", title: "Máy chủ không tìm thấy công cụ", desc: c.server });
         if (c.rpcError) {
-          s.push({ from: "s", to: "h", kind: "err", label: "🧨 error", title: "Response là JSON-RPC error (không có result)", payload: { jsonrpc: "2.0", id: 42, error: c.rpcError }, hl: ["error", "code"], fields: [["error.code -32602", "Invalid params / công cụ không tồn tại — lỗi tầng giao thức."], ["(không có isError)", "Không mang errorCategory/isRetryable → model khó tự phục hồi."]] });
+          s.push({ from: "s", to: "h", kind: "err", label: "lỗi giao thức", title: "Máy chủ trả về lỗi giao thức", desc: "Câu trả lời không có kết quả, chỉ có một khối <code>error</code> với mã lỗi chuẩn. Không có thông tin nào như “loại lỗi” hay “có nên thử lại”.", payload: { jsonrpc: "2.0", id: 42, error: c.rpcError }, hl: ["error", "code"] });
         } else if (c.ok) {
-          s.push({ from: "d", to: "s", kind: "res", label: "∅ 0 dòng", title: "Kho trả 0 bản ghi", payload: { rows: [] } });
-          s.push({ from: "s", to: "h", kind: "ok", label: "✅ result", title: "Thành công với danh sách rỗng — isError: false", payload: { jsonrpc: "2.0", id: 42, result: { content: [{ type: "text", text: J(c.ok) }], isError: false } }, hl: ["isError", "note"], note: "Rỗng hợp lệ phải nói rõ “truy vấn thành công”. Đừng dùng cùng một hình dạng cho timeout và cho rỗng." });
+          s.push({ from: "d", to: "s", kind: "res", label: "0 dòng", title: "Kho dữ liệu trả về 0 kết quả", desc: "Truy vấn chạy bình thường, chỉ là không có dữ liệu khớp.", payload: { rows: [] } });
+          s.push({ from: "s", to: "h", kind: "ok", label: "thành công", title: "Máy chủ trả về: thành công, danh sách rỗng", desc: "Kết quả ghi rõ <code>isError: false</code> và kèm một câu nói rõ tìm kiếm đã chạy thành công. Như vậy Claude không thể nhầm với trường hợp bị lỗi.", payload: { jsonrpc: "2.0", id: 42, result: { content: [{ type: "text", text: J(c.ok) }], isError: false } }, hl: ["isError", "note"], note: "Nếu khi bị lỗi công cụ cũng trả về danh sách rỗng, Claude sẽ không có cách nào phân biệt hai trường hợp." });
         } else {
-          s.push({ from: "d", to: "s", kind: "err", label: "⚠️", title: "Phát hiện lỗi", payload: k === "transient" ? "ETIMEDOUT after 5000ms" : c.body.message });
+          s.push({ from: "d", to: "s", kind: "err", label: "lỗi", title: "Phát hiện lỗi", desc: "Máy chủ ghi nhận lỗi và chuẩn bị một thông báo có cấu trúc để gửi lại.", payload: k === "transient" ? "ETIMEDOUT sau 5000ms" : c.body.message });
           s.push({
-            from: "s", to: "h", kind: "err", label: "📥 isError", title: "Lỗi thực thi công cụ: result.isError = true + metadata",
+            from: "s", to: "h", kind: "err", label: "isError", title: "Máy chủ trả về kết quả lỗi, kèm thông tin rõ ràng",
+            desc: "Đây là lỗi khi chạy công cụ: kết quả có <code>isError: true</code>, và nội dung bên trong cho biết loại lỗi, có nên thử lại không, kèm một câu mô tả dễ hiểu.",
             payload: { jsonrpc: "2.0", id: 42, result: { content: [{ type: "text", text: J(c.body) }], isError: true } },
             hl: ["isError", "errorCategory", "isRetryable"],
-            fields: [["result.isError", "Công cụ chạy nhưng thất bại — <b>model nhìn thấy</b> nội dung lỗi để tự xử lý."], ["errorCategory", "transient / validation / business / permission — quyết định chiến lược phục hồi."], ["isRetryable", "Gợi ý có nên gọi lại không."], ["message / customer_facing", "Mô tả cho model và (nếu có) câu thân thiện để nói với khách."]],
+            fields: [["isError", "Công cụ đã chạy nhưng thất bại. Claude sẽ đọc được nội dung lỗi để tự xử lý."], ["errorCategory", "Loại lỗi: tạm thời, đầu vào sai, vi phạm chính sách hay không đủ quyền. Mỗi loại cần một cách xử lý khác."], ["isRetryable", "Có nên thử lại không."], ["message / customer_facing", "Mô tả cho Claude hiểu, và nếu có, một câu thân thiện để Claude nói lại với khách."]],
           });
         }
-        s.push({
-          from: "h", to: "c", kind: c.ok ? "res" : "err", label: "📤 tool_result", title: "Client chuyển kết quả thành tool_result cho Claude",
-          payload: { type: "tool_result", tool_use_id: "toolu_21", is_error: !c.ok, content: c.rpcError ? "MCP error -32602: Unknown tool: lookup_ordr" : J(c.ok || c.body) },
-          hl: ["is_error"],
-        });
+        s.push({ from: "h", to: "c", kind: c.ok ? "res" : "err", label: "kết quả", title: "Client chuyển kết quả cho Claude", desc: "Client đổi câu trả lời của máy chủ thành một khối <code>tool_result</code> và đưa cho Claude.", payload: { type: "tool_result", tool_use_id: "toolu_21", is_error: !c.ok, content: c.rpcError ? "MCP error -32602: Unknown tool: lookup_ordr" : J(c.ok || c.body) }, hl: ["is_error"] });
         s.push({ from: "c", to: "c", kind: c.ok || k === "business" || k === "validation" ? "ok" : "warn", title: "Claude quyết định bước tiếp theo", desc: c.nextDesc, payload: c.next });
         return s;
       },
     }),
   };
 
-  /* ───────── 2-3 tool_choice: request & response thật ───────── */
+  /* ───────── 2-3 tool_choice ───────── */
   W.toolChoice = {
-    title: "tool_choice — cùng một request, bốn hành vi",
+    title: "tool_choice: cùng một yêu cầu, bốn cách hành xử",
     render(el) {
       const tools = ["extract_invoice", "extract_receipt", "extract_metadata"];
       const inv = { vendor: "Công ty X", invoice_no: "INV-889", total: 1240, currency: "USD", issued: "2026-03-15" };
       const M = {
-        auto: { cfg: { type: "auto" }, resp: { content: [{ type: "text", text: "Đây là hóa đơn INV-889 của Công ty X, tổng 1.240 USD, ngày 15/03/2026." }], stop_reason: "end_turn" }, notes: ["Mặc định khi có tools.", "Claude <b>có thể</b> gọi công cụ hoặc trả lời text → không đảm bảo có JSON.", "Có thể kèm text giải thích trước khối tool_use."], ok: false },
-        any: { cfg: { type: "any" }, resp: { content: [{ type: "tool_use", id: "toolu_31", name: "extract_invoice", input: inv }], stop_reason: "tool_use" }, notes: ["<b>Bắt buộc</b> gọi một công cụ; Claude tự chọn công cụ hợp loại tài liệu.", "Không có text đứng trước tool_use (API ép phần mở đầu của câu trả lời là tool_use).", "Dùng khi có nhiều schema và chưa biết trước loại tài liệu."], ok: true },
-        tool: { cfg: { type: "tool", name: "extract_metadata" }, resp: { content: [{ type: "tool_use", id: "toolu_32", name: "extract_metadata", input: { doc_type: "invoice", language: "vi", pages: 1 } }], stop_reason: "tool_use" }, notes: ["<b>Bắt buộc</b> gọi đúng công cụ đã nêu.", "Dùng để ép thứ tự: luôn trích metadata trước rồi mới tới bước khác.", "Hoặc khi chỉ có một schema đầu ra."], ok: true },
-        none: { cfg: { type: "none" }, resp: { content: [{ type: "text", text: "Tài liệu là một hóa đơn bán hàng…" }], stop_reason: "end_turn" }, notes: ["Cấm gọi công cụ dù tools vẫn được gửi (giữ nguyên prompt cache).", "Dùng cho lượt chỉ cần tóm tắt/giải thích."], ok: false },
+        auto: { name: "auto", cfg: { type: "auto" }, resp: { content: [{ type: "text", text: "Đây là hóa đơn INV-889 của Công ty X, tổng 1.240 USD, ngày 15/03/2026." }], stop_reason: "end_turn" }, say: "Claude tự quyết. Ở đây nó chọn trả lời bằng một câu văn, nên bạn không nhận được dữ liệu JSON để lưu. Đây là giá trị mặc định khi có gửi kèm công cụ.", ok: false },
+        any: { name: "any", cfg: { type: "any" }, resp: { content: [{ type: "tool_use", id: "toolu_31", name: "extract_invoice", input: inv }], stop_reason: "tool_use" }, say: "Claude <b>bắt buộc</b> phải gọi một công cụ, nhưng được tự chọn công cụ nào. Nó chọn extract_invoice vì đây là hóa đơn. Phù hợp khi có nhiều loại tài liệu mà chưa biết trước tài liệu sắp tới thuộc loại nào.", ok: true },
+        tool: { name: "chỉ định công cụ", cfg: { type: "tool", name: "extract_metadata" }, resp: { content: [{ type: "tool_use", id: "toolu_32", name: "extract_metadata", input: { doc_type: "invoice", language: "vi", pages: 1 } }], stop_reason: "tool_use" }, say: "Claude <b>bắt buộc</b> gọi đúng công cụ được chỉ định. Dùng khi muốn một bước chắc chắn chạy trước, ví dụ luôn trích thông tin chung của tài liệu đầu tiên.", ok: true },
+        none: { name: "none", cfg: { type: "none" }, resp: { content: [{ type: "text", text: "Tài liệu này là một hóa đơn bán hàng..." }], stop_reason: "end_turn" }, say: "Claude <b>không được</b> gọi công cụ, dù danh sách công cụ vẫn được gửi kèm. Dùng cho lượt chỉ cần trả lời bằng chữ, mà vẫn giữ nguyên danh sách công cụ để tận dụng phần đã lưu đệm.", ok: false },
       };
-      let cur = "auto", par = false;
+      let cur = "auto";
       const draw = () => {
         const m = M[cur];
-        const cfg = Object.assign({}, m.cfg, par && cur !== "none" ? { disable_parallel_tool_use: true } : {});
-        el.innerHTML = `<p class="small muted" style="margin-top:0">Công cụ: ${tools.map((t) => `<code>${t}</code>`).join(", ")} · Input: ảnh một hóa đơn.</p>
-          <div class="compare-tabs">${Object.keys(M).map((k) => `<button class="${k === cur ? "on" : ""}" data-k="${k}">${k}</button>`).join("")}</div>
-          <label class="toggle"><input type="checkbox" id="par" ${par ? "checked" : ""}> disable_parallel_tool_use</label>
-          <div class="grid grid-2" style="margin-top:8px"><div><div class="tr-ptitle">📤 Request (trích)</div>${code({ model: "claude-sonnet-5-5", max_tokens: 1024, tools: tools.map((n) => ({ name: n, description: "…", input_schema: "{…}" })), tool_choice: cfg, messages: [{ role: "user", content: [{ type: "image", source: "{…}" }, { type: "text", text: "Trích xuất tài liệu này." }] }] }, ["tool_choice", "type", "name", "disable_parallel_tool_use"])}</div>
-          <div><div class="tr-ptitle">📥 Response</div>${code(m.resp, ["stop_reason", "type"])}</div></div>
-          <div class="msg ${m.ok ? "tool" : "system"}"><span class="who">Hành vi</span><ul style="margin:4px 0 0;padding-left:18px">${m.notes.map((n) => `<li>${n}</li>`).join("")}</ul></div>
-          <div class="callout warn">⚠️ Với extended thinking chỉ dùng được <code>auto</code> hoặc <code>none</code>; <code>any</code>/<code>tool</code> sẽ bị từ chối.</div>`;
+        el.innerHTML = `<p class="tr-intro">Ba công cụ trích xuất được gửi kèm, cùng ảnh một hóa đơn. Chỉ thay đổi trường <code>tool_choice</code>, xem câu trả lời của Claude khác nhau thế nào.</p>
+          <div class="compare-tabs" style="margin-top:14px">${Object.keys(M).map((k) => `<button class="${k === cur ? "on" : ""}" data-k="${k}">${M[k].name}</button>`).join("")}</div>
+          <div class="tr-step" style="margin:6px 0 18px"><p class="tr-desc">${m.say}</p></div>
+          <div class="tr-details"><div class="tr-tabs"><button class="on">Yêu cầu gửi đi (trích)</button></div><div class="tr-pane">${code({ tools: tools.map((n) => ({ name: n, description: "...", input_schema: "{...}" })), tool_choice: m.cfg, messages: [{ role: "user", content: [{ type: "image", source: "{...}" }, { type: "text", text: "Trích xuất tài liệu này." }] }] }, ["tool_choice", "type", "name"])}</div></div>
+          <div class="tr-details" style="margin-top:14px"><div class="tr-tabs"><button class="on">Câu trả lời của Claude</button></div><div class="tr-pane">${code(m.resp, ["stop_reason", "type"])}</div></div>
+          <div class="callout warn" style="margin-top:16px"><b>Lưu ý.</b> Nếu bật chế độ suy nghĩ mở rộng (extended thinking), chỉ dùng được <code>auto</code> hoặc <code>none</code>.</div>`;
         el.querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => { cur = b.dataset.k; draw(); }));
-        el.querySelector("#par").onchange = (e) => { par = e.target.checked; draw(); };
       };
       draw();
     },
   };
 
-  /* ───────── 2-4 Vòng đời MCP server ───────── */
+  /* ───────── 2-4 Vòng đời máy chủ MCP ───────── */
   W.mcpLifecycle = {
-    title: "Vòng đời MCP: từ .mcp.json tới tool_result",
+    title: "Từ file .mcp.json tới lúc Claude dùng được công cụ",
     render: trace({
-      intro: "Claude Code là <b>MCP host/client</b>; mỗi server là một tiến trình (stdio) hoặc endpoint HTTP. Mọi trao đổi là <b>JSON-RPC 2.0</b>.",
+      intro: "Claude Code đóng vai trò client: nó khởi động từng máy chủ MCP, hỏi xem máy chủ có công cụ gì, rồi đưa những công cụ đó cho Claude dùng. Mọi trao đổi giữa client và máy chủ theo chuẩn JSON-RPC.",
       actors: [
         { id: "h", icon: "🧑‍💻", name: "Claude Code", sub: "MCP client" },
-        { id: "s", icon: "🔌", name: "MCP server", sub: "github (stdio)" },
-        { id: "g", icon: "🐙", name: "GitHub API" },
+        { id: "s", icon: "🔌", name: "Máy chủ MCP", sub: "github" },
+        { id: "g", icon: "🐙", name: "GitHub" },
         { id: "c", icon: "🧠", name: "Claude", sub: "model" },
       ],
-      stateTitle: "🧰 Công cụ model nhìn thấy",
-      controls: [{ id: "tok", type: "toggle", label: "Biến môi trường <code>GITHUB_TOKEN</code> đã được đặt", value: true }],
+      stateTitle: "Công cụ Claude đang có",
+      controls: [{ id: "tok", type: "toggle", label: "Máy của bạn đã đặt biến môi trường <code>GITHUB_TOKEN</code>", value: true }],
       steps: ({ tok }) => {
         const s = [];
         s.push({
-          from: "h", to: "h", kind: "internal", title: "Đọc .mcp.json và mở rộng biến môi trường",
-          payloads: [{ t: ".mcp.json (commit trong repo)", d: { mcpServers: { github: { command: "npx", args: ["-y", "@modelcontextprotocol/server-github"], env: { GITHUB_TOKEN: "${GITHUB_TOKEN}" } } } }, hl: ["GITHUB_TOKEN"] }],
-          backend: ["Gộp cấu hình theo phạm vi: local / project (.mcp.json) / user (~/.claude.json).", "Server project-scope lần đầu → hỏi người dùng có tin cậy không.", tok ? "<code>${GITHUB_TOKEN}</code> → giá trị trong shell của từng dev. Có thể đặt mặc định: <code>${VAR:-default}</code>." : "<b>Không có GITHUB_TOKEN</b> → cấu hình báo thiếu biến môi trường."],
-          warn: tok ? null : "Lỗi nằm ở môi trường của dev, không phải ở repo. Sửa: export GITHUB_TOKEN (hoặc dùng trình quản lý secret), KHÔNG dán token vào .mcp.json.",
-          state: [{ r: "sys", t: "Read, Edit, Grep, Glob, Bash… (tích hợp sẵn)" }],
+          from: "h", to: "h", kind: "internal", title: "Claude Code đọc file .mcp.json",
+          desc: tok ? "File này nằm trong repo, cả nhóm dùng chung. Thay vì ghi token thật, file ghi <code>${GITHUB_TOKEN}</code>, và Claude Code lấy giá trị thật từ máy của bạn." : "File ghi <code>${GITHUB_TOKEN}</code>, nhưng máy của bạn chưa đặt biến này, nên Claude Code báo lỗi cấu hình.",
+          payloads: [{ t: ".mcp.json (được commit trong repo)", d: { mcpServers: { github: { command: "npx", args: ["-y", "@modelcontextprotocol/server-github"], env: { GITHUB_TOKEN: "${GITHUB_TOKEN}" } } } }, hl: ["GITHUB_TOKEN"] }],
+          warn: tok ? null : "Lỗi nằm ở máy của bạn, không phải ở repo. Hãy đặt biến GITHUB_TOKEN trên máy mình. Đừng dán token vào file .mcp.json.",
+          note: tok ? "Lần đầu gặp máy chủ khai báo trong .mcp.json, Claude Code sẽ hỏi bạn có tin tưởng máy chủ đó không." : null,
+          state: [{ r: "sys", t: "Các công cụ có sẵn: Read, Edit, Grep, Glob, Bash…" }],
         });
         if (!tok) {
-          s.push({ from: "h", to: "c", kind: "err", label: "⚠️ thiếu tool", title: "Model không có công cụ GitHub", desc: "Server không khởi động → model chỉ thấy công cụ tích hợp sẵn. Nếu người dùng yêu cầu tạo issue, Claude sẽ báo không có công cụ hoặc thử đường vòng (ví dụ gợi ý lệnh gh)." });
+          s.push({ from: "h", to: "c", kind: "err", label: "thiếu công cụ", title: "Claude không có công cụ GitHub", desc: "Vì máy chủ không khởi động được, Claude chỉ có các công cụ sẵn có. Nếu bạn nhờ tạo issue, Claude sẽ báo là không làm được, hoặc gợi ý cách khác." });
           return s;
         }
-        s.push({ from: "h", to: "s", kind: "req", label: "🚀 spawn", title: "Khởi chạy tiến trình server (transport stdio)", payload: "$ npx -y @modelcontextprotocol/server-github\n  env: GITHUB_TOKEN=ghp_•••• (từ shell của dev)\n  stdin/stdout: các message JSON-RPC, mỗi message một dòng", note: "Với server từ xa: transport HTTP (Streamable HTTP) và xác thực OAuth thay cho biến môi trường." });
-        s.push({ from: "h", to: "s", kind: "req", label: "🤝 initialize", title: "Bắt tay: client gửi initialize", payload: { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: { roots: { listChanged: true } }, clientInfo: { name: "claude-code", version: "2.x" } } }, hl: ["protocolVersion", "capabilities"], fields: [["protocolVersion", "Phiên bản giao thức client hỗ trợ; hai bên thương lượng."], ["capabilities", "Client khai báo khả năng của mình (roots, sampling, elicitation…)."]] });
-        s.push({ from: "s", to: "h", kind: "res", label: "🤝 capabilities", title: "Server khai báo khả năng", payload: { jsonrpc: "2.0", id: 1, result: { protocolVersion: "2025-06-18", capabilities: { tools: { listChanged: true }, resources: { subscribe: false } }, serverInfo: { name: "github", version: "1.4.0" } } }, hl: ["tools", "resources"], fields: [["capabilities.tools", "Server có công cụ (hành động)."], ["capabilities.resources", "Server có tài nguyên (nội dung đọc được: file, schema, danh mục)."], ["listChanged", "Server sẽ báo khi danh sách công cụ thay đổi."]] });
-        s.push({ from: "h", to: "s", kind: "req", label: "📣 initialized", title: "Client xác nhận sẵn sàng (notification, không có id)", payload: { jsonrpc: "2.0", method: "notifications/initialized" } });
-        s.push({ from: "h", to: "s", kind: "req", label: "📋 tools/list", title: "Hỏi danh sách công cụ", payload: { jsonrpc: "2.0", id: 2, method: "tools/list" } });
-        s.push({ from: "s", to: "h", kind: "res", label: "📋 tools", title: "Server trả định nghĩa công cụ", payload: { jsonrpc: "2.0", id: 2, result: { tools: [{ name: "create_issue", description: "Tạo issue trong repo. Cần owner, repo, title.", inputSchema: { type: "object", properties: { owner: { type: "string" }, repo: { type: "string" }, title: { type: "string" }, body: { type: "string" } }, required: ["owner", "repo", "title"] } }, { name: "search_issues", description: "Tìm issue theo truy vấn GitHub search.", inputSchema: "{…}" }] } }, hl: ["name", "description", "inputSchema"], note: "Đây là lúc chất lượng <b>description</b> của server quyết định Claude có chọn đúng công cụ hay không." });
-        s.push({ from: "h", to: "h", kind: "internal", title: "Đăng ký công cụ với tên có tiền tố", backend: ["<code>create_issue</code> → <code>mcp__github__create_issue</code> (tránh trùng tên giữa các server).", "Gộp vào danh sách công cụ gửi cho model cùng các công cụ tích hợp sẵn.", "Có thể gọi thêm <code>resources/list</code> để biết danh mục tài nguyên mà không cần công cụ khám phá."], push: [{ r: "ok", t: "<b>mcp__github__create_issue</b>" }, { r: "ok", t: "<b>mcp__github__search_issues</b>" }] });
-        s.push({ from: "h", to: "c", kind: "req", label: "📤 request", title: "Model nhận công cụ MCP như mọi công cụ khác", payload: { tools: [{ name: "Read", description: "…" }, "…", { name: "mcp__github__create_issue", description: "Tạo issue trong repo. Cần owner, repo, title.", input_schema: "{…}" }], messages: [{ role: "user", content: "Tạo issue: nút Thanh toán bị lệch trên Safari" }] }, hl: ["mcp__github__create_issue"] });
-        s.push({ from: "c", to: "h", kind: "res", label: "📥 tool_use", title: "Claude gọi công cụ MCP", payload: { type: "tool_use", id: "toolu_41", name: "mcp__github__create_issue", input: { owner: "acme", repo: "web", title: "Nút Thanh toán bị lệch trên Safari", body: "Tái hiện: Safari 18, trang /checkout…" } } });
-        s.push({ from: "h", to: "h", kind: "internal", title: "Kiểm tra quyền", backend: ["Công cụ có trong allow-list (<code>permissions.allow: [\"mcp__github__create_issue\"]</code>)? → chạy luôn.", "Không có → hỏi người dùng (hoặc bị chặn trong chế độ không tương tác).", "Hook PreToolUse (nếu có) chạy ở đây."] });
-        s.push({ from: "h", to: "s", kind: "req", label: "📤 tools/call", title: "Gửi tools/call", payload: { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "create_issue", arguments: { owner: "acme", repo: "web", title: "Nút Thanh toán bị lệch trên Safari", body: "…" } } }, hl: ["name"] });
-        s.push({ from: "s", to: "g", kind: "req", label: "🌐 REST", title: "Server gọi GitHub bằng token của dev", sub: "POST /repos/acme/web/issues", payload: "POST https://api.github.com/repos/acme/web/issues\nAuthorization: Bearer ghp_••••\n{\"title\":\"Nút Thanh toán bị lệch trên Safari\",\"body\":\"…\"}", note: "Token chỉ tồn tại trong tiến trình server — model không bao giờ nhìn thấy nó." });
-        s.push({ from: "g", to: "s", kind: "res", label: "✅ 201", title: "GitHub tạo issue", payload: { number: 482, html_url: "https://github.com/acme/web/issues/482", state: "open" } });
-        s.push({ from: "s", to: "h", kind: "res", label: "📥 result", title: "Server trả result", payload: { jsonrpc: "2.0", id: 3, result: { content: [{ type: "text", text: "Đã tạo issue #482: https://github.com/acme/web/issues/482" }], isError: false } } });
-        s.push({ from: "h", to: "c", kind: "ok", label: "📤 tool_result", title: "Claude nhận tool_result và trả lời", payload: { type: "tool_result", tool_use_id: "toolu_41", content: "Đã tạo issue #482: https://github.com/acme/web/issues/482" } });
+        s.push({ from: "h", to: "s", kind: "req", label: "khởi động", title: "Claude Code khởi động máy chủ MCP", desc: "Máy chủ chạy như một chương trình con trên máy bạn. Hai bên trao đổi qua đường nhập và xuất chuẩn (stdio), mỗi tin nhắn JSON nằm trên một dòng. Token chỉ được truyền cho chương trình con này.", payload: "$ npx -y @modelcontextprotocol/server-github\n  biến môi trường: GITHUB_TOKEN=ghp_•••• (lấy từ máy của bạn)", note: "Với máy chủ ở xa, kết nối qua HTTP thay vì stdio, và thường đăng nhập bằng OAuth." });
+        s.push({ from: "h", to: "s", kind: "req", label: "chào hỏi", title: "Client chào hỏi máy chủ", desc: "Bước đầu tiên luôn là <code>initialize</code>: client cho biết nó dùng phiên bản giao thức nào và hỗ trợ những tính năng gì.", payload: { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: { roots: { listChanged: true } }, clientInfo: { name: "claude-code", version: "2.x" } } }, hl: ["protocolVersion", "capabilities"] });
+        s.push({ from: "s", to: "h", kind: "res", label: "giới thiệu", title: "Máy chủ cho biết nó cung cấp những gì", desc: "Máy chủ trả lời rằng nó có công cụ (tools) và nội dung để đọc (resources), và sẽ báo cho client khi danh sách công cụ thay đổi.", payload: { jsonrpc: "2.0", id: 1, result: { protocolVersion: "2025-06-18", capabilities: { tools: { listChanged: true }, resources: { subscribe: false } }, serverInfo: { name: "github", version: "1.4.0" } } }, hl: ["tools", "resources"] });
+        s.push({ from: "h", to: "s", kind: "req", label: "sẵn sàng", title: "Client báo đã sẵn sàng", desc: "Đây là một thông báo một chiều, không cần máy chủ trả lời, nên không có mã id.", payload: { jsonrpc: "2.0", method: "notifications/initialized" } });
+        s.push({ from: "h", to: "s", kind: "req", label: "hỏi danh sách", title: "Client hỏi danh sách công cụ", desc: "Client gửi <code>tools/list</code> để biết máy chủ có những công cụ nào.", payload: { jsonrpc: "2.0", id: 2, method: "tools/list" } });
+        s.push({ from: "s", to: "h", kind: "res", label: "danh sách", title: "Máy chủ gửi định nghĩa các công cụ", desc: "Mỗi công cụ có tên, đoạn mô tả và danh sách tham số. Đoạn mô tả này chính là thứ Claude dựa vào để chọn công cụ, nên chất lượng của nó rất quan trọng.", payload: { jsonrpc: "2.0", id: 2, result: { tools: [{ name: "create_issue", description: "Tạo issue trong repo. Cần owner, repo, title.", inputSchema: { type: "object", properties: { owner: { type: "string" }, repo: { type: "string" }, title: { type: "string" }, body: { type: "string" } }, required: ["owner", "repo", "title"] } }, { name: "search_issues", description: "Tìm issue theo cú pháp tìm kiếm của GitHub.", inputSchema: "{...}" }] } }, hl: ["name", "description", "inputSchema"] });
+        s.push({ from: "h", to: "h", kind: "internal", title: "Claude Code đặt tên đầy đủ cho từng công cụ", desc: "Để tránh trùng tên giữa các máy chủ, mỗi công cụ được đặt tên theo dạng <code>mcp__&lt;máy chủ&gt;__&lt;công cụ&gt;</code>, ví dụ <code>create_issue</code> thành <code>mcp__github__create_issue</code>. Các công cụ này được thêm vào danh sách gửi cho Claude.", push: [{ r: "ok", t: "<b>mcp__github__create_issue</b>" }, { r: "ok", t: "<b>mcp__github__search_issues</b>" }] });
+        s.push({ from: "h", to: "c", kind: "req", label: "yêu cầu", title: "Claude nhận công cụ MCP như mọi công cụ khác", desc: "Với Claude, công cụ MCP không có gì khác biệt. Nó chỉ thấy thêm vài công cụ mới trong danh sách.", payload: { tools: [{ name: "Read", description: "..." }, "...", { name: "mcp__github__create_issue", description: "Tạo issue trong repo. Cần owner, repo, title.", input_schema: "{...}" }], messages: [{ role: "user", content: "Tạo issue: nút Thanh toán bị lệch trên Safari" }] }, hl: ["mcp__github__create_issue"] });
+        s.push({ from: "c", to: "h", kind: "res", label: "xin tạo issue", title: "Claude xin dùng công cụ tạo issue", desc: "Claude điền đủ owner, repo, tiêu đề và nội dung.", payload: { type: "tool_use", id: "toolu_41", name: "mcp__github__create_issue", input: { owner: "acme", repo: "web", title: "Nút Thanh toán bị lệch trên Safari", body: "Cách tái hiện: Safari 18, trang /checkout..." } } });
+        s.push({ from: "h", to: "h", kind: "internal", title: "Claude Code kiểm tra quyền", desc: "Nếu công cụ đã được cho phép sẵn trong cài đặt, nó chạy ngay. Nếu chưa, Claude Code hỏi bạn. Nếu có hook PreToolUse, hook cũng chạy ở bước này." });
+        s.push({ from: "h", to: "s", kind: "req", label: "tools/call", title: "Client gọi công cụ trên máy chủ", desc: "Client dùng lại tên gốc <code>create_issue</code> khi nói chuyện với máy chủ.", payload: { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "create_issue", arguments: { owner: "acme", repo: "web", title: "Nút Thanh toán bị lệch trên Safari", body: "..." } } }, hl: ["name"] });
+        s.push({ from: "s", to: "g", kind: "req", label: "gọi GitHub", title: "Máy chủ gọi GitHub bằng token của bạn", sub: "POST /repos/acme/web/issues", desc: "Token chỉ tồn tại bên trong chương trình máy chủ MCP. Claude không bao giờ nhìn thấy nó.", payload: "POST https://api.github.com/repos/acme/web/issues\nAuthorization: Bearer ghp_••••\n{\"title\":\"Nút Thanh toán bị lệch trên Safari\",\"body\":\"...\"}" });
+        s.push({ from: "g", to: "s", kind: "res", label: "đã tạo", title: "GitHub tạo issue số 482", desc: "GitHub trả về số issue và đường dẫn.", payload: { number: 482, html_url: "https://github.com/acme/web/issues/482", state: "open" } });
+        s.push({ from: "s", to: "h", kind: "res", label: "kết quả", title: "Máy chủ trả kết quả cho client", desc: "Kết quả thành công, có <code>isError: false</code>.", payload: { jsonrpc: "2.0", id: 3, result: { content: [{ type: "text", text: "Đã tạo issue #482: https://github.com/acme/web/issues/482" }], isError: false } } });
+        s.push({ from: "h", to: "c", kind: "ok", label: "kết quả", title: "Claude nhận kết quả và báo cho bạn", desc: "Kết quả được đưa cho Claude, và Claude báo lại cho bạn đường dẫn tới issue vừa tạo.", payload: { type: "tool_result", tool_use_id: "toolu_41", content: "Đã tạo issue #482: https://github.com/acme/web/issues/482" } });
         return s;
       },
     }),
   };
 
-  /* ───────── 2-5 Công cụ tích hợp sẵn: khám phá tăng dần ───────── */
+  /* ───────── 2-5 Công cụ có sẵn: tìm hiểu từ từ ───────── */
   W.builtinTrace = {
-    title: "Khám phá tăng dần: Grep → Read → Edit (kèm lỗi neo không duy nhất)",
+    title: "Tìm hiểu code từ từ: Grep, Read, rồi Edit",
     render: trace({
-      intro: "Nhiệm vụ: “Thêm retry cho mọi nơi gọi <code>processPayment()</code>”. Xem Claude dùng công cụ nào, tham số gì, và nhận lại gì.",
+      intro: "Nhiệm vụ: “Thêm xử lý lỗi cho mọi chỗ gọi hàm <code>processPayment()</code>”. Xem Claude chọn công cụ nào ở mỗi bước, truyền tham số gì, và nhận lại gì.",
       actors: [
         { id: "c", icon: "🧠", name: "Claude" },
         { id: "h", icon: "🖥️", name: "Claude Code", sub: "chạy công cụ" },
-        { id: "f", icon: "📁", name: "Repo", sub: "file system" },
+        { id: "f", icon: "📁", name: "Repo", sub: "các file code" },
       ],
-      stateTitle: "🗂️ Ngữ cảnh đã nạp",
+      stateTitle: "Những gì Claude đã biết",
       steps: [
-        { from: "c", to: "h", kind: "res", label: "🔍 Grep", title: "Tìm theo NỘI DUNG — Grep", payload: { name: "Grep", input: { pattern: "processPayment\\(", output_mode: "files_with_matches", type: "ts" } }, fields: [["pattern", "Regex (ripgrep) tìm bên trong file."], ["output_mode", "<code>files_with_matches</code> chỉ trả đường dẫn — rẻ ngữ cảnh; <code>content</code> trả dòng khớp."], ["type / glob", "Lọc loại file để giảm nhiễu."]], note: "Không đọc cả repo trước. Bắt đầu từ điểm vào hẹp nhất." },
-        { from: "f", to: "c", kind: "res", label: "📄 3 file", title: "Kết quả gọn: 3 đường dẫn", payload: "src/checkout/service.ts\nsrc/subscriptions/renew.ts\nsrc/admin/manual-charge.ts", push: [{ r: "tool", t: "Grep → 3 file gọi processPayment" }] },
-        { from: "c", to: "h", kind: "res", label: "📖 Read", title: "Đọc file đầu tiên", payload: { name: "Read", input: { file_path: "/repo/src/checkout/service.ts" } }, fields: [["file_path", "Đường dẫn tuyệt đối."], ["offset / limit", "Đọc một phần file lớn."]] },
-        { from: "f", to: "c", kind: "res", label: "📄 nội dung", title: "Nội dung có số dòng", payload: "  1  import { processPayment } from \"../payments/gateway\";\n 18  const res = await processPayment(order.total, card);\n 19  if (!res.ok) {\n 20    return null;\n 21  }\n 42  if (!refund.ok) {\n 43    return null;\n 44  }", push: [{ r: "tool", t: "Read service.ts (đã đọc → được phép Edit)" }] },
-        { from: "c", to: "h", kind: "res", label: "📖 Read", title: "Lần theo import tới định nghĩa", payload: { name: "Read", input: { file_path: "/repo/src/payments/gateway.ts" } }, desc: "Theo dấu import thay vì Glob cả thư mục: biết processPayment có ném lỗi mạng hay trả <code>{ok:false}</code> — quyết định cách viết retry.", push: [{ r: "tool", t: "Read gateway.ts → lỗi mạng ném NetworkError" }] },
-        { from: "c", to: "h", kind: "res", label: "✏️ Edit", title: "Edit với neo quá ngắn", payload: { name: "Edit", input: { file_path: "/repo/src/checkout/service.ts", old_string: "return null;", new_string: "throw new PaymentFailed(res.error);" } }, hl: ["old_string"], fields: [["old_string", "Đoạn văn bản neo — phải xuất hiện <b>đúng một lần</b> (trừ khi replace_all)."], ["new_string", "Nội dung thay thế."], ["replace_all", "true → thay mọi chỗ khớp (dùng cho đổi tên)."]] },
-        { from: "h", to: "c", kind: "err", label: "❌ lỗi", title: "Edit thất bại: neo xuất hiện nhiều lần", payload: "Found 2 matches of the string to replace, but replace_all is false. To replace all occurrences, set replace_all to true. To replace only one occurrence, please provide more context to uniquely identify the instance.", warn: "Gọi lại Edit y nguyên sẽ lỗi mãi. Cũng đừng bật replace_all ở đây — dòng 43 thuộc nhánh refund, không được đổi." },
-        { from: "c", to: "h", kind: "res", label: "✏️ Edit", title: "Mở rộng neo cho duy nhất", payload: { name: "Edit", input: { file_path: "/repo/src/checkout/service.ts", old_string: "if (!res.ok) {\n    return null;", new_string: "if (!res.ok) {\n    throw new PaymentFailed(res.error);" } }, hl: ["old_string"], note: "Neo kèm dòng ngữ cảnh phía trên → chỉ khớp một chỗ. Nếu file nhiều chỗ giống hệt nhau khó phân biệt: Read toàn bộ rồi Write lại." },
-        { from: "f", to: "c", kind: "ok", label: "✅ đã sửa", title: "Edit thành công", payload: "The file /repo/src/checkout/service.ts has been updated.", push: [{ r: "ok", t: "Edit service.ts (dòng 20)" }] },
-        { from: "c", to: "h", kind: "res", label: "▶️ Bash", title: "Chạy test để kiểm chứng", payload: { name: "Bash", input: { command: "npm test -- checkout", description: "Chạy test module checkout" } } },
-        { from: "f", to: "c", kind: "ok", label: "✅ pass", title: "Test pass", payload: "PASS src/checkout/service.test.ts (12 tests)", push: [{ r: "ok", t: "Bash npm test → 12 pass" }] },
+        { from: "c", to: "h", kind: "res", label: "Grep", title: "Bắt đầu bằng tìm theo nội dung", desc: "Claude không đọc cả repo. Nó dùng Grep để tìm những file có chứa chuỗi “processPayment(”, và chỉ yêu cầu danh sách tên file cho gọn.", payload: { name: "Grep", input: { pattern: "processPayment\\(", output_mode: "files_with_matches", type: "ts" } }, fields: [["pattern", "Mẫu cần tìm bên trong file."], ["output_mode", "<code>files_with_matches</code> chỉ trả về danh sách file, rất gọn. <code>content</code> trả về cả những dòng khớp."], ["type", "Chỉ tìm trong file TypeScript, để bớt kết quả thừa."]] },
+        { from: "f", to: "c", kind: "res", label: "3 file", title: "Kết quả: ba file", desc: "Chỉ ba đường dẫn, tốn rất ít chỗ trong ngữ cảnh.", payload: "src/checkout/service.ts\nsrc/subscriptions/renew.ts\nsrc/admin/manual-charge.ts", push: [{ r: "tool", t: "Grep: có 3 file gọi processPayment" }] },
+        { from: "c", to: "h", kind: "res", label: "Read", title: "Đọc file đầu tiên", desc: "Claude đọc file service.ts để xem hàm được gọi ở đâu và kết quả được xử lý thế nào.", payload: { name: "Read", input: { file_path: "/repo/src/checkout/service.ts" } } },
+        { from: "f", to: "c", kind: "res", label: "nội dung", title: "Nội dung file, có số dòng", desc: "Claude thấy có hai chỗ cùng viết <code>return null;</code>: dòng 20 thuộc phần thanh toán, dòng 43 thuộc phần hoàn tiền.", payload: "  1  import { processPayment } from \"../payments/gateway\";\n 18  const res = await processPayment(order.total, card);\n 19  if (!res.ok) {\n 20    return null;\n 21  }\n 42  if (!refund.ok) {\n 43    return null;\n 44  }", push: [{ r: "tool", t: "Đã đọc service.ts (đọc rồi mới được sửa)" }] },
+        { from: "c", to: "h", kind: "res", label: "Read", title: "Lần theo dòng import", desc: "Thay vì đọc cả thư mục, Claude mở đúng file được import. Nhờ vậy nó biết hàm này báo lỗi mạng bằng cách ném ra NetworkError, từ đó quyết định cách xử lý lỗi cho phù hợp.", payload: { name: "Read", input: { file_path: "/repo/src/payments/gateway.ts" } }, push: [{ r: "tool", t: "Đã đọc gateway.ts: lỗi mạng ném ra NetworkError" }] },
+        { from: "c", to: "h", kind: "res", label: "Edit", title: "Thử sửa với đoạn cần thay quá ngắn", desc: "Claude muốn sửa dòng 20 và đưa đoạn cần thay là <code>return null;</code>.", payload: { name: "Edit", input: { file_path: "/repo/src/checkout/service.ts", old_string: "return null;", new_string: "throw new PaymentFailed(res.error);" } }, hl: ["old_string"], fields: [["old_string", "Đoạn văn bản cần thay. Nó phải xuất hiện <b>đúng một lần</b> trong file, trừ khi bật replace_all."], ["new_string", "Nội dung mới."], ["replace_all", "Nếu bật, mọi chỗ khớp đều bị thay. Chỉ dùng khi chắc chắn, ví dụ đổi tên biến."]] },
+        { from: "h", to: "c", kind: "err", label: "lỗi", title: "Edit báo lỗi: đoạn cần thay xuất hiện hai lần", desc: "Edit không biết nên sửa dòng 20 hay dòng 43, nên từ chối và giải thích hai cách xử lý.", payload: "Found 2 matches of the string to replace, but replace_all is false. To replace all occurrences, set replace_all to true. To replace only one occurrence, please provide more context to uniquely identify the instance.", warn: "Gọi lại y nguyên thì sẽ lỗi mãi. Bật replace_all cũng sai ở đây, vì dòng 43 thuộc phần hoàn tiền và không được đổi." },
+        { from: "c", to: "h", kind: "res", label: "Edit", title: "Lấy thêm dòng phía trên cho đoạn cần thay là duy nhất", desc: "Claude ghép thêm dòng <code>if (!res.ok) {</code> vào đoạn cần thay. Đoạn mới chỉ xuất hiện ở đúng một chỗ.", payload: { name: "Edit", input: { file_path: "/repo/src/checkout/service.ts", old_string: "if (!res.ok) {\n    return null;", new_string: "if (!res.ok) {\n    throw new PaymentFailed(res.error);" } }, hl: ["old_string"], note: "Nếu file có nhiều chỗ giống hệt nhau, khó tạo đoạn duy nhất, có thể đọc cả file rồi ghi lại bằng Write." },
+        { from: "f", to: "c", kind: "ok", label: "đã sửa", title: "Sửa thành công", desc: "File đã được cập nhật đúng chỗ.", payload: "The file /repo/src/checkout/service.ts has been updated.", push: [{ r: "ok", t: "Đã sửa service.ts, dòng 20" }] },
+        { from: "c", to: "h", kind: "res", label: "Bash", title: "Chạy test để kiểm tra", desc: "Sửa xong, Claude dùng Bash để chạy test của phần thanh toán.", payload: { name: "Bash", input: { command: "npm test -- checkout", description: "Chạy test phần checkout" } } },
+        { from: "f", to: "c", kind: "ok", label: "đạt", title: "Tất cả test đều đạt", desc: "12 test của phần checkout đều chạy thành công.", payload: "PASS src/checkout/service.test.ts (12 tests)", push: [{ r: "ok", t: "Chạy test: 12 test đều đạt" }] },
       ],
     }),
   };

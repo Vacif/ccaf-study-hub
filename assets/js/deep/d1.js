@@ -3,97 +3,86 @@ window.DEEP_ADD({
   /* ─────────────── 1-1 ─────────────── */
   "1-1": {
     advanced: `
-<h4>🔁 Máy trạng thái của vòng lặp</h4>
-<div class="dg dg-anim">
-  <div class="dn"><span class="i">📤</span><b>Gửi request</b>system + tools + messages</div><span class="da">→</span>
-  <div class="dn"><span class="i">📥</span><b>Đọc stop_reason</b></div><span class="da">→</span>
-  <div class="dn hot"><span class="i">🛠️</span><b>tool_use</b>chạy công cụ → nối tool_result → gửi lại</div><span class="da">|</span>
-  <div class="dn good"><span class="i">🏁</span><b>end_turn</b>trả lời người dùng, lưu lịch sử</div><span class="da">|</span>
-  <div class="dn bad"><span class="i">✂️</span><b>max_tokens</b>bị cắt → tăng trần / xử lý riêng</div>
-</div>
-<h4>📋 Mọi giá trị stop_reason cần xử lý</h4>
-<table class="t">
-  <tr><th>stop_reason</th><th>Ý nghĩa</th><th>Backend nên làm</th></tr>
-  <tr><td><code>end_turn</code></td><td>Claude kết thúc tự nhiên</td><td>Thoát vòng lặp, trả lời</td></tr>
-  <tr><td><code>tool_use</code></td><td>Claude yêu cầu chạy ≥ 1 công cụ</td><td>Chạy tất cả, trả tool_result cho từng <code>id</code>, gọi lại</td></tr>
-  <tr><td><code>max_tokens</code></td><td>Chạm trần token đầu ra</td><td>Không coi là xong; tool_use có thể dở dang → tăng <code>max_tokens</code> và gọi lại</td></tr>
-  <tr><td><code>stop_sequence</code></td><td>Gặp chuỗi dừng bạn đặt</td><td>Xử lý theo logic của bạn</td></tr>
-  <tr><td><code>pause_turn</code></td><td>Lượt dài với <em>server tool</em> (ví dụ web search chạy phía Anthropic) bị tạm dừng</td><td>Gửi lại response như message assistant để Claude tiếp tục</td></tr>
-  <tr><td><code>refusal</code></td><td>Model từ chối vì lý do an toàn</td><td>Không retry y nguyên; xử lý/escalate</td></tr>
-</table>
-<h4>📐 Luật cấu trúc message (sai là API trả lỗi 400)</h4>
-<ul>
-  <li>Mỗi khối <code>tool_use</code> phải có đúng một <code>tool_result</code> với <code>tool_use_id</code> trùng khớp, nằm trong message <code>user</code> <b>ngay sau</b> message assistant đó.</li>
-  <li>Nhiều tool_use trong một lượt → <b>một</b> message user chứa tất cả tool_result; các khối tool_result đặt trước mọi text.</li>
-  <li>Nối <b>nguyên văn</b> <code>resp.content</code> (kể cả text) vào lịch sử với role assistant — đừng chỉ giữ phần text.</li>
-  <li>Công cụ lỗi vẫn phải có tool_result: <code>is_error: true</code> + mô tả.</li>
-</ul>
-<h4>💰 Chi phí & độ dài ngữ cảnh</h4>
-<p>API <b>stateless</b>: lượt thứ <i>n</i> gửi lại toàn bộ <i>n−1</i> lượt trước. Token đầu vào mỗi lượt tăng tuyến tính, tổng chi phí cả phiên tăng nhanh hơn tuyến tính. Ba đòn bẩy:</p>
-<ul>
-  <li><b>Prompt caching</b>: đánh dấu <code>cache_control</code> ở cuối phần tĩnh (tools, system, phần đầu lịch sử) — phần lặp lại được tính giá rẻ hơn nhiều và nhanh hơn.</li>
-  <li><b>Cắt gọn tool_result</b> về trường cần thiết trước khi nối vào lịch sử.</li>
-  <li><b>Tóm tắt / nén</b> lịch sử cũ khi gần ngưỡng (nhưng giữ dữ kiện quan trọng nguyên văn — xem mục 5-1).</li>
-</ul>
-<h4>🧯 Lưới an toàn — không phải tín hiệu dừng</h4>
-<ul>
-  <li><code>MAX_TURNS</code>, timeout tổng, ngân sách token/chi phí: chạm ngưỡng → kết thúc <b>có kiểm soát</b> (escalate, báo người dùng), không im lặng cắt.</li>
-  <li>Phát hiện lặp: cùng công cụ + cùng input nhiều lần liên tiếp → dấu hiệu lỗi trả về không đủ thông tin để Claude đổi hướng.</li>
-</ul>
-<h4>🧰 Bạn có thể không phải tự viết vòng lặp</h4>
-<p>Claude Agent SDK và tool runner của SDK chạy vòng lặp này cho bạn (gọi công cụ, nối kết quả, dừng ở end_turn). Nhưng đề thi kiểm tra bạn <b>hiểu</b> vòng lặp: tín hiệu nào điều khiển, dữ liệu nào phải đi đâu.</p>`,
+<section class="adv-block">
+  <h4>Một lượt của vòng lặp, chi tiết từng bước</h4>
+  <ol class="steps-dg">
+    <li>Chương trình gửi một request gồm: hướng dẫn chung (<code>system</code>), danh sách công cụ (<code>tools</code>) và toàn bộ cuộc trò chuyện tới thời điểm đó (<code>messages</code>).</li>
+    <li>Claude trả về một danh sách các khối nội dung. Có thể là chữ, có thể là yêu cầu chạy công cụ (<code>tool_use</code>), hoặc cả hai.</li>
+    <li class="hot">Chương trình xem <code>stop_reason</code>. Nếu là <code>tool_use</code>, nó chạy từng công cụ được yêu cầu.</li>
+    <li>Mỗi kết quả được đóng gói thành một khối <code>tool_result</code>, mang đúng mã <code>tool_use_id</code> của yêu cầu tương ứng, rồi thêm vào cuộc trò chuyện.</li>
+    <li class="good">Gửi lại cho Claude và lặp lại, cho tới khi <code>stop_reason</code> là <code>end_turn</code>.</li>
+  </ol>
+</section>
+<section class="adv-block">
+  <h4>Các giá trị stop_reason cần xử lý</h4>
+  <p>Ngoài <code>tool_use</code> và <code>end_turn</code>, có một giá trị rất hay bị bỏ quên là <code>max_tokens</code>. Nó nghĩa là Claude bị cắt ngang vì đã viết tới giới hạn độ dài cho phép, chứ không phải đã làm xong. Lúc này câu trả lời có thể dang dở, thậm chí yêu cầu công cụ cũng có thể bị cắt nửa chừng. Cách xử lý thường là tăng giới hạn <code>max_tokens</code> rồi gọi lại.</p>
+  <p>Vì vậy, điều kiện dừng nên viết là “dừng khi bằng <code>end_turn</code>”, chứ đừng viết “dừng khi khác <code>tool_use</code>”. Cách viết thứ hai vô tình coi trường hợp bị cắt ngang là đã hoàn thành.</p>
+</section>
+<section class="adv-block">
+  <h4>Ba quy tắc ghép yêu cầu và kết quả</h4>
+  <p>Nếu làm sai, API sẽ từ chối request:</p>
+  <ul>
+    <li>Mỗi yêu cầu <code>tool_use</code> phải có đúng một <code>tool_result</code> với mã trùng khớp, nằm ngay trong tin nhắn kế tiếp.</li>
+    <li>Nếu Claude xin chạy nhiều công cụ trong một lượt, gửi tất cả kết quả trong <b>một</b> tin nhắn, không tách thành nhiều tin.</li>
+    <li>Công cụ bị lỗi vẫn phải có kết quả: đánh dấu <code>is_error: true</code> và mô tả lỗi để Claude biết đường xử lý.</li>
+  </ul>
+</section>
+<section class="adv-block">
+  <h4>Vì sao cuộc trò chuyện càng dài càng tốn tiền</h4>
+  <p>API không ghi nhớ gì giữa các lần gọi, nên mỗi lượt chương trình phải gửi lại toàn bộ cuộc trò chuyện. Lượt thứ 30 gửi lại cả 29 lượt trước, nên chi phí tăng nhanh theo độ dài. Hai cách giảm hiệu quả nhất là dùng <b>prompt caching</b> (cho phép API lưu đệm phần đầu lặp lại như hướng dẫn và danh sách công cụ, những lần sau tính giá rẻ hơn), và <b>cắt gọn kết quả công cụ</b> trước khi thêm vào cuộc trò chuyện.</p>
+</section>`,
     traps: [
       {
-        title: "Text + tool_use trong cùng response",
+        title: "Câu trả lời vừa có chữ vừa có yêu cầu chạy công cụ",
         level: "hard",
-        scenario: "Response có <code>content: [{type:\"text\", text:\"Đã xong, mình đang hoàn tiền cho bạn\"}, {type:\"tool_use\", name:\"process_refund\", …}]</code>. Code của bạn: <code>if any(b.type == \"text\"): return text</code>.",
-        bait: "“Có câu trả lời rồi, gửi cho khách thôi” — hoặc tìm chữ “xong” để quyết định dừng.",
-        why: "Claude có thể nói trước khi gọi công cụ. Hoàn tiền chưa hề được thực hiện; khách nhận lời hứa sai.",
-        fix: ["Chỉ dùng <code>stop_reason</code> để điều khiển vòng lặp.", "<code>tool_use</code> → chạy công cụ, nối kết quả, gọi lại; chỉ trả lời khi <code>end_turn</code>.", "Không phân tích ngôn ngữ tự nhiên để ra quyết định điều khiển."],
-        code: "while True:\n    resp = call(messages)\n    messages.append({\"role\": \"assistant\", \"content\": resp.content})\n    if resp.stop_reason == \"end_turn\": break\n    if resp.stop_reason == \"tool_use\": messages.append(run_tools(resp))",
+        scenario: "Claude trả về hai khối: một khối chữ “Đã xong, mình đang hoàn tiền cho bạn”, và một khối <code>tool_use</code> gọi <code>process_refund</code>. Chương trình của bạn có điều kiện: hễ câu trả lời có chữ thì gửi chữ đó cho khách và dừng.",
+        bait: "Nghĩ rằng đã có câu trả lời thì gửi cho khách luôn, hoặc tìm chữ “xong” để quyết định dừng.",
+        why: "Claude có thể nói trước rồi mới xin chạy công cụ. Ở đây lệnh hoàn tiền chưa hề được thực hiện, nên khách nhận được một lời hứa không có thật.",
+        fix: ["Chỉ dùng <code>stop_reason</code> để quyết định dừng hay chạy tiếp.", "Nếu là <code>tool_use</code> thì chạy công cụ, thêm kết quả vào cuộc trò chuyện và gọi lại. Chỉ trả lời khách khi gặp <code>end_turn</code>.", "Không dựa vào việc đọc nội dung chữ để điều khiển chương trình."],
+        code: "while True:\n    resp = call_claude(messages)\n    messages.append({\"role\": \"assistant\", \"content\": resp.content})\n    if resp.stop_reason == \"end_turn\":\n        break\n    if resp.stop_reason == \"tool_use\":\n        messages.append(run_tools(resp))",
       },
       {
-        title: "Một trong hai công cụ song song bị lỗi",
+        title: "Một trong hai công cụ chạy song song bị lỗi",
         level: "hard",
-        scenario: "Claude gọi song song <code>lookup_order</code> và <code>get_refund_policy</code>. Policy service ném exception. Backend chỉ gửi lại tool_result của lookup_order rồi gọi API → nhận lỗi 400.",
-        bait: "Bỏ qua công cụ lỗi cho “gọn”, hoặc throw exception lên trên làm sập cả phiên chat.",
-        why: "API yêu cầu mọi tool_use phải có tool_result tương ứng. Bỏ qua → request không hợp lệ; throw → khách mất phiên.",
-        fix: ["Bọc từng công cụ trong try/except.", "Lỗi → vẫn tạo tool_result với <code>is_error: true</code> và nội dung có phân loại (transient/validation/…).", "Gửi tất cả tool_result trong <b>một</b> message user.", "Để Claude quyết định thử lại hay báo khách."],
+        scenario: "Claude xin chạy cùng lúc <code>lookup_order</code> và <code>get_refund_policy</code>. Dịch vụ chính sách bị lỗi. Chương trình chỉ gửi lại kết quả của <code>lookup_order</code>, và API trả về lỗi 400.",
+        bait: "Bỏ qua công cụ bị lỗi cho gọn, hoặc để lỗi làm dừng luôn cả cuộc trò chuyện.",
+        why: "API yêu cầu mọi yêu cầu chạy công cụ đều phải có kết quả tương ứng. Bỏ qua thì request không hợp lệ; để lỗi làm dừng chương trình thì khách mất cả cuộc trò chuyện vì một lỗi có thể khắc phục.",
+        fix: ["Bọc từng công cụ trong khối bắt lỗi (try/except).", "Khi lỗi, vẫn tạo <code>tool_result</code> với <code>is_error: true</code>, kèm mô tả loại lỗi.", "Gửi cả hai kết quả trong một tin nhắn.", "Để Claude tự quyết định thử lại hay báo cho khách."],
       },
       {
-        title: "Vòng lặp lặp vô tận",
-        scenario: "Log cho thấy Claude gọi <code>search_kb(\"chính sách hoàn tiền\")</code> 14 lần liên tiếp tới khi chạm MAX_TURNS = 15. Mỗi lần công cụ trả <code>\"Operation failed\"</code>.",
-        bait: "Tăng MAX_TURNS lên 50, hoặc hạ xuống 3 để “đỡ tốn tiền”.",
-        why: "Giới hạn chỉ che triệu chứng. Nguyên nhân là lỗi mơ hồ: Claude không biết lỗi do đâu nên thử lại y hệt.",
-        fix: ["Trả lỗi có cấu trúc: loại lỗi, có retry được không, gợi ý sửa.", "Phát hiện lặp (cùng tên + cùng input ≥ 3 lần) → dừng, escalate có tóm tắt.", "Giữ MAX_TURNS hợp lý làm lưới an toàn, xử lý khi chạm (escalate) thay vì cắt im lặng."],
+        title: "Claude gọi đi gọi lại một công cụ",
+        scenario: "Nhật ký cho thấy Claude gọi <code>search_kb(\"chính sách hoàn tiền\")</code> 14 lần liên tiếp cho tới khi chạm giới hạn 15 vòng. Lần nào công cụ cũng trả về “Operation failed”.",
+        bait: "Tăng giới hạn lên 50 vòng, hoặc giảm xuống 3 vòng cho đỡ tốn tiền.",
+        why: "Đổi giới hạn chỉ che đi triệu chứng. Nguyên nhân thật là thông báo lỗi quá mơ hồ, Claude không biết lỗi do đâu nên cứ thử lại y nguyên.",
+        fix: ["Cho công cụ trả lỗi rõ ràng: loại lỗi, có nên thử lại không, và gợi ý cách sửa.", "Phát hiện việc lặp (cùng công cụ, cùng tham số từ ba lần trở lên) thì dừng và chuyển cho người, kèm tóm tắt.", "Vẫn giữ giới hạn số vòng như một lưới an toàn, và khi chạm giới hạn thì kết thúc có thông báo rõ ràng."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Response của Claude có stop_reason \"tool_use\" với hai khối tool_use (A, B). Công cụ B ném exception. Backend nên gửi gì ở request tiếp theo?",
-        options: ["Một message user chỉ chứa tool_result của A", "Một message user chứa tool_result của A và tool_result của B với is_error: true kèm mô tả lỗi", "Hai message user liên tiếp, mỗi message một tool_result", "Không gửi gì, trả lỗi 500 cho người dùng"],
+        q: "Claude trả về stop_reason \"tool_use\" với hai yêu cầu chạy công cụ A và B. Công cụ B bị lỗi. Lần gọi tiếp theo nên gửi gì?",
+        options: ["Một tin nhắn chỉ chứa kết quả của A", "Một tin nhắn chứa kết quả của A, và kết quả của B có is_error: true kèm mô tả lỗi", "Hai tin nhắn liên tiếp, mỗi tin một kết quả", "Không gửi gì, trả lỗi 500 cho người dùng"],
         answer: 1,
-        explain: "Mọi tool_use cần một tool_result tương ứng trong cùng một message user ngay sau đó; lỗi được báo bằng is_error để Claude tự phục hồi.",
-        notes: ["Thiếu kết quả cho B → API từ chối request.", "Đúng cấu trúc và cho Claude đủ thông tin để xử lý lỗi.", "Các tool_result của cùng một lượt phải nằm chung một message.", "Làm hỏng trải nghiệm vì một lỗi có thể phục hồi được."],
-        trap: "Phương án A trông “sạch sẽ” nhưng vi phạm luật cặp tool_use ↔ tool_result.",
+        explain: "Mỗi yêu cầu chạy công cụ đều cần một kết quả tương ứng, tất cả nằm trong cùng một tin nhắn ngay sau đó. Lỗi được báo bằng is_error để Claude tự tìm cách xử lý.",
+        notes: ["Thiếu kết quả cho B nên API sẽ từ chối request.", "Đúng cấu trúc, và cho Claude đủ thông tin để xử lý lỗi.", "Các kết quả của cùng một lượt phải nằm chung một tin nhắn.", "Làm hỏng trải nghiệm người dùng chỉ vì một lỗi có thể khắc phục."],
+        trap: "Phương án A trông gọn gàng nhưng vi phạm quy tắc mỗi yêu cầu phải có một kết quả.",
       },
       {
         level: "hard",
-        q: "Agent thỉnh thoảng gửi cho khách câu trả lời bị cụt giữa chừng. Log cho thấy stop_reason của các response đó là \"max_tokens\". Code hiện tại dừng vòng lặp khi stop_reason khác \"tool_use\". Cách sửa đúng?",
-        options: ["Thêm vào prompt: “trả lời ngắn gọn”", "Xử lý riêng max_tokens: không coi là hoàn thành, tăng max_tokens (hoặc tiếp tục sinh) rồi mới trả lời", "Giảm số công cụ", "Dừng khi response có text"],
+        q: "Agent thỉnh thoảng gửi cho khách câu trả lời bị cụt giữa chừng. Nhật ký cho thấy stop_reason của các câu đó là \"max_tokens\". Code hiện tại dừng vòng lặp khi stop_reason khác \"tool_use\". Nên sửa thế nào?",
+        options: ["Thêm vào prompt: “trả lời ngắn gọn”", "Xử lý riêng max_tokens: không coi là đã xong, tăng giới hạn độ dài rồi gọi lại", "Bớt số công cụ", "Dừng khi câu trả lời có chữ"],
         answer: 1,
-        explain: "Điều kiện dừng đúng là end_turn, không phải “khác tool_use”. max_tokens nghĩa là bị cắt — cần xử lý riêng.",
-        notes: ["Có thể giảm tần suất nhưng không sửa logic sai; câu dài vẫn bị cắt.", "Đúng: phân biệt từng stop_reason.", "Không liên quan đến việc bị cắt.", "Chính là anti-pattern gây ra lỗi."],
-        trap: "Điều kiện “!= tool_use” trông tương đương “== end_turn” nhưng gộp chung max_tokens, stop_sequence, refusal… vào nhánh “xong”.",
+        explain: "Điều kiện dừng đúng là end_turn. max_tokens nghĩa là câu trả lời bị cắt ngang, cần xử lý riêng.",
+        notes: ["Có thể giảm tần suất, nhưng không sửa được logic sai; câu dài vẫn bị cắt.", "Đúng. Mỗi giá trị stop_reason được xử lý theo đúng ý nghĩa của nó.", "Không liên quan tới việc bị cắt ngang.", "Đây chính là cách làm sai gây ra lỗi."],
+        trap: "“Khác tool_use” nghe giống “bằng end_turn”, nhưng thực ra gộp luôn cả trường hợp bị cắt ngang vào nhóm “đã xong”.",
       },
       {
         level: "hard",
-        q: "Một phiên hỗ trợ 40 lượt có chi phí đầu vào tăng rất nhanh về cuối phiên. Nguyên nhân gốc và cách giảm phù hợp nhất?",
-        options: ["Model tự nhớ hội thoại nên tốn bộ nhớ; chuyển model nhỏ hơn", "API stateless nên mỗi lượt gửi lại toàn bộ lịch sử; dùng prompt caching cho phần tĩnh và cắt gọn tool_result", "Chuyển sang Message Batches API", "Tăng max_tokens"],
+        q: "Một cuộc trò chuyện hỗ trợ dài 40 lượt có chi phí tăng rất nhanh về cuối. Nguyên nhân và cách giảm phù hợp nhất là gì?",
+        options: ["Model tự ghi nhớ hội thoại nên tốn bộ nhớ; đổi sang model nhỏ hơn", "API không ghi nhớ gì nên mỗi lượt phải gửi lại toàn bộ hội thoại; dùng prompt caching và cắt gọn kết quả công cụ", "Chuyển sang Message Batches API", "Tăng max_tokens"],
         answer: 1,
-        explain: "Mỗi request gửi lại system + tools + toàn bộ messages. Cache phần lặp lại và giảm kích thước kết quả công cụ là đòn bẩy trực tiếp.",
-        notes: ["Model không lưu trạng thái giữa các request.", "Đúng nguyên nhân và đúng đòn bẩy.", "Chat cần phản hồi ngay — Batch không phù hợp.", "max_tokens là trần đầu ra, không giảm đầu vào."],
+        explain: "Mỗi lần gọi đều gửi lại hướng dẫn, danh sách công cụ và toàn bộ hội thoại. Lưu đệm phần lặp lại và giảm kích thước kết quả công cụ tác động thẳng vào nguyên nhân.",
+        notes: ["Model không lưu gì giữa các lần gọi.", "Đúng nguyên nhân và đúng cách giảm.", "Trò chuyện cần phản hồi ngay nên Batch không phù hợp.", "max_tokens là giới hạn độ dài câu trả lời, không giảm phần gửi đi."],
       },
     ],
   },
@@ -101,61 +90,53 @@ window.DEEP_ADD({
   /* ─────────────── 1-2 ─────────────── */
   "1-2": {
     advanced: `
-<h4>🏗️ So sánh các kiểu phối hợp đa agent</h4>
-<table class="t">
-  <tr><th>Mô hình</th><th>Ưu</th><th>Nhược</th><th>Khi nào</th></tr>
-  <tr><td>🧭 Hub-and-spoke (coordinator)</td><td>Một điểm quan sát, xử lý lỗi & áp chính sách nhất quán</td><td>Coordinator là nút cổ chai; mọi dữ liệu phải đi qua nó</td><td>Mặc định cho hệ thống production</td></tr>
-  <tr><td>➡️ Pipeline cố định</td><td>Dễ đoán, dễ test</td><td>Không thích ứng với phát hiện mới</td><td>Các bước biết trước (OCR → trích → kiểm tra)</td></tr>
-  <tr><td>🕸️ Agent nói chuyện trực tiếp</td><td>Linh hoạt</td><td>Khó theo dõi, lỗi lan truyền khó kiểm soát</td><td>Hiếm khi là đáp án đúng trong đề</td></tr>
-</table>
-<h4>🧠 Coordinator làm 5 việc</h4>
-<div class="dg dg-anim">
-  <div class="dn"><span class="i">🧩</span><b>Phân rã</b>đủ mảng, không chồng lấn</div><span class="da">→</span>
-  <div class="dn"><span class="i">🎯</span><b>Chọn</b>subagent theo độ phức tạp</div><span class="da">→</span>
-  <div class="dn"><span class="i">📨</span><b>Truyền ngữ cảnh</b>tường minh</div><span class="da">→</span>
-  <div class="dn"><span class="i">🧪</span><b>Đánh giá</b>kết quả, phát hiện lỗ hổng</div><span class="da">→</span>
-  <div class="dn"><span class="i">🧵</span><b>Tổng hợp</b>+ ghi chú bao phủ</div>
-</div>
-<h4>🔄 Vòng tinh chỉnh của coordinator</h4>
-<p>Coordinator tốt không chỉ “giao một lần rồi gộp”. Sau khi nhận bản tổng hợp, nó so với tiêu chí ban đầu: mảng nào thiếu bằng chứng, nhận định nào chỉ có một nguồn → ủy thác thêm có mục tiêu, rồi mới kết thúc.</p>
-<h4>📏 Chọn subagent động</h4>
-<ul>
-  <li>“Thủ đô của Pháp?” → không cần cả pipeline 4 subagent; trả lời trực tiếp hoặc 1 subagent.</li>
-  <li>Câu hỏi nghiên cứu rộng → nhiều subagent search song song + synth.</li>
-  <li>Luôn chạy đủ pipeline cho mọi truy vấn: tốn chi phí, tăng độ trễ, không tăng chất lượng.</li>
-</ul>
-<h4>🔍 Truy nguyên lỗi báo cáo thiếu</h4>
-<ol>
-  <li>Xem danh sách tác vụ coordinator đã tạo (log các lệnh Task). Thiếu mảng ở đây → lỗi phân rã.</li>
-  <li>Nếu đủ mảng: xem output từng subagent. Thiếu ở đây → lỗi prompt/công cụ subagent.</li>
-  <li>Nếu subagent đủ mà báo cáo thiếu → lỗi bước tổng hợp (prompt synth không nhận đủ dữ liệu).</li>
-</ol>`,
+<section class="adv-block">
+  <h4>Vì sao nên để mọi thứ đi qua coordinator</h4>
+  <p>Nếu các agent con được phép nói chuyện trực tiếp với nhau, hệ thống trở nên khó theo dõi: không ai biết chắc thông tin nào đã đi đâu, và một lỗi ở chỗ này có thể lan sang chỗ khác mà không ai hay. Khi mọi thông tin đều đi qua coordinator, bạn có một chỗ duy nhất để ghi nhật ký, xử lý lỗi và áp dụng chính sách.</p>
+  <p>Cái giá phải trả là coordinator trở thành điểm tập trung: mọi dữ liệu đều phải đi qua nó. Với hầu hết hệ thống thật, đánh đổi này là đáng.</p>
+</section>
+<section class="adv-block">
+  <h4>Coordinator nên kiểm tra lại trước khi kết thúc</h4>
+  <p>Một coordinator tốt không chỉ giao việc một lần rồi ghép kết quả. Sau khi nhận bản tổng hợp, nó so lại với yêu cầu ban đầu: còn khía cạnh nào thiếu bằng chứng, nhận định nào mới chỉ có một nguồn. Sau đó nó giao thêm việc có mục tiêu cho những chỗ thiếu, rồi mới kết thúc.</p>
+</section>
+<section class="adv-block">
+  <h4>Không phải câu hỏi nào cũng cần cả đội</h4>
+  <p>Câu hỏi tra cứu đơn giản không cần bốn agent con chạy đủ quy trình. Coordinator nên đánh giá độ phức tạp của câu hỏi và chỉ gọi những agent con thật sự cần. Luôn chạy đủ quy trình cho mọi câu hỏi chỉ làm tăng chi phí và thời gian chờ, không làm tăng chất lượng.</p>
+</section>
+<section class="adv-block">
+  <h4>Lần ra nguyên nhân khi báo cáo bị thiếu</h4>
+  <ol class="steps-dg">
+    <li>Xem danh sách việc coordinator đã giao. Nếu thiếu khía cạnh ngay ở đây, lỗi nằm ở bước chia việc.</li>
+    <li>Nếu đã giao đủ, xem kết quả từng agent con. Thiếu ở đây thì lỗi nằm ở hướng dẫn hoặc công cụ của agent con.</li>
+    <li>Nếu agent con đã trả đủ mà báo cáo vẫn thiếu, lỗi nằm ở bước tổng hợp, thường do agent tổng hợp không được nhận đủ dữ liệu.</li>
+  </ol>
+</section>`,
     traps: [
       {
-        title: "Mọi subagent đều “xanh” mà báo cáo vẫn thiếu",
+        title: "Agent con nào cũng làm tốt mà báo cáo vẫn thiếu",
         level: "hard",
-        scenario: "Chủ đề “Tác động của AI tới ngành sáng tạo”. Log: 3 subagent search (hội họa, thiết kế đồ họa, nhiếp ảnh) đều trả kết quả tốt, synth viết mạch lạc. Người đọc phàn nàn báo cáo không nhắc tới âm nhạc, văn học, điện ảnh.",
-        bait: "Tăng số kết quả mỗi subagent search, hoặc đổi model mạnh hơn cho synth.",
-        why: "Subagent chỉ làm đúng phần được giao. Ba mảng được giao đều thuộc nghệ thuật thị giác — lỗi nằm ở <b>bước phân rã</b> của coordinator.",
-        fix: ["Sửa prompt coordinator: liệt kê các chiều cần bao phủ (loại hình sáng tạo, khía cạnh kinh tế/pháp lý…) trước khi giao.", "Thêm bước tự kiểm tra: “danh sách mảng có bao phủ đủ chủ đề không?”.", "Báo cáo cuối có phần ghi chú độ bao phủ."],
+        scenario: "Đề tài: “Tác động của AI tới các ngành sáng tạo”. Nhật ký cho thấy ba agent con tìm kiếm (hội họa, thiết kế đồ họa, nhiếp ảnh) đều trả kết quả tốt, agent tổng hợp viết mạch lạc. Người đọc phàn nàn báo cáo không nhắc gì tới âm nhạc, văn học, điện ảnh.",
+        bait: "Tăng số kết quả mỗi agent tìm kiếm phải lấy, hoặc đổi sang model mạnh hơn cho agent tổng hợp.",
+        why: "Agent con chỉ làm đúng phần được giao, và cả ba phần được giao đều thuộc nghệ thuật thị giác. Lỗi nằm ở bước coordinator chia việc.",
+        fix: ["Sửa hướng dẫn cho coordinator: trước khi giao việc, liệt kê các khía cạnh cần bao quát của đề tài.", "Thêm một bước tự kiểm tra: danh sách việc đã giao có phủ hết đề tài chưa?", "Thêm phần ghi chú độ bao phủ vào cuối báo cáo."],
       },
       {
-        title: "Subagent muốn hỏi subagent khác",
-        scenario: "Subagent phân tích cần thêm nguồn. Một kỹ sư đề xuất cho subagent phân tích quyền gọi trực tiếp subagent search.",
-        bait: "Cho các subagent gọi nhau để “linh hoạt”.",
-        why: "Phá vỡ hub-and-spoke: mất điểm quan sát chung, lỗi lan truyền khó theo dõi, coordinator không biết phạm vi thực tế. (Trong Claude Code, subagent cũng không tự tạo subagent lồng nhau.)",
-        fix: ["Subagent trả về yêu cầu có cấu trúc: “cần thêm nguồn về X vì Y”.", "Coordinator quyết định có ủy thác thêm hay không.", "Mọi giao tiếp đi qua coordinator."],
+        title: "Agent con muốn hỏi thẳng agent con khác",
+        scenario: "Agent phân tích cần thêm nguồn. Một kỹ sư đề xuất cho agent phân tích quyền gọi trực tiếp agent tìm kiếm cho nhanh.",
+        bait: "Đồng ý vì linh hoạt và nhanh hơn.",
+        why: "Làm vậy phá vỡ mô hình đi qua coordinator: mất chỗ theo dõi chung, lỗi lan ra khó kiểm soát, và coordinator không còn biết phạm vi công việc thật sự.",
+        fix: ["Agent phân tích trả về một yêu cầu rõ ràng, ví dụ “cần thêm nguồn về X vì Y”.", "Coordinator quyết định có giao thêm việc tìm kiếm hay không.", "Giữ nguyên quy tắc mọi trao đổi đều đi qua coordinator."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Hệ thống nghiên cứu luôn chạy đủ 4 subagent (search, phân tích, kiểm chứng, tổng hợp) cho mọi câu hỏi, kể cả câu tra cứu đơn giản. Chi phí và độ trễ cao. Cải thiện phù hợp nhất?",
-        options: ["Gộp 4 subagent thành một agent lớn", "Để coordinator chọn subagent động theo độ phức tạp của truy vấn", "Chuyển tất cả sang Batch API", "Bỏ subagent kiểm chứng"],
+        q: "Hệ thống nghiên cứu luôn chạy đủ bốn agent con (tìm kiếm, phân tích, kiểm chứng, tổng hợp) cho mọi câu hỏi, kể cả câu tra cứu đơn giản. Chi phí và thời gian chờ đều cao. Nên cải thiện thế nào?",
+        options: ["Gộp bốn agent con thành một agent lớn", "Để coordinator đánh giá câu hỏi và chỉ gọi những agent con cần thiết", "Chuyển tất cả sang Batch API", "Bỏ agent kiểm chứng"],
         answer: 1,
-        explain: "Coordinator đánh giá truy vấn và chỉ kích hoạt những subagent cần thiết — giảm chi phí mà không hi sinh chất lượng ca phức tạp.",
-        notes: ["Mất lợi ích cô lập ngữ cảnh và chuyên môn hóa.", "Đúng: định tuyến động.", "Người dùng đang chờ — Batch không phù hợp.", "Giảm chất lượng ở các ca phức tạp cần kiểm chứng."],
-        trap: "Phương án D cũng giảm chi phí nhưng là cắt giảm mù quáng thay vì định tuyến theo nhu cầu.",
+        explain: "Coordinator chọn agent con theo độ phức tạp của câu hỏi, giảm chi phí mà không làm giảm chất lượng của những câu hỏi khó.",
+        notes: ["Mất lợi ích của việc chia vai trò và tách ngữ cảnh.", "Đúng: chọn agent con theo nhu cầu.", "Người dùng đang chờ nên Batch không phù hợp.", "Câu hỏi khó cần kiểm chứng sẽ bị giảm chất lượng."],
+        trap: "Phương án D cũng giảm chi phí, nhưng là cắt bỏ một cách máy móc thay vì chọn theo nhu cầu.",
       },
     ],
   },
@@ -164,64 +145,54 @@ window.DEEP_ADD({
   "1-3": {
     widgets: ["subagentTrace", "contextPassing"],
     advanced: `
-<h4>🧱 Giải phẫu AgentDefinition và lệnh Task</h4>
-<table class="t">
-  <tr><th>Trường</th><th>Nằm ở</th><th>Tác dụng</th></tr>
-  <tr><td><code>description</code></td><td>AgentDefinition</td><td>Coordinator dùng để quyết định gọi subagent nào (như description của công cụ)</td></tr>
-  <tr><td><code>prompt</code></td><td>AgentDefinition</td><td>System prompt của subagent</td></tr>
-  <tr><td><code>tools</code></td><td>AgentDefinition</td><td>Công cụ subagent được dùng — giới hạn theo vai trò</td></tr>
-  <tr><td><code>model</code></td><td>AgentDefinition</td><td>Model cho subagent (rẻ hơn cho việc đơn giản)</td></tr>
-  <tr><td><code>subagent_type</code></td><td>input của Task</td><td>Chọn định nghĩa nào</td></tr>
-  <tr><td><code>prompt</code></td><td>input của Task</td><td><b>Toàn bộ</b> thông tin nhiệm vụ subagent nhận được</td></tr>
-</table>
-<p>Trong Claude Code, subagent còn có thể khai báo bằng file Markdown trong <code>.claude/agents/</code> (frontmatter: name, description, tools, model). Ở một số phiên bản, công cụ Task có thể hiển thị dưới tên khác — đề thi dùng tên <b>Task</b>.</p>
-<h4>📦 Định dạng truyền ngữ cảnh nên dùng</h4>
-<pre><code>Mục tiêu: …
-Tiêu chí hoàn thành: …
+<section class="adv-block">
+  <h4>Khai báo một agent con gồm những gì</h4>
+  <p>Mỗi loại agent con được khai báo bằng một <code>AgentDefinition</code> có bốn phần: <code>description</code> là đoạn mô tả để coordinator biết khi nào nên gọi agent này; <code>prompt</code> là hướng dẫn riêng cho agent con; <code>tools</code> là danh sách công cụ nó được dùng; và <code>model</code> là model sẽ chạy nó, có thể chọn model rẻ hơn cho việc đơn giản.</p>
+  <p>Khi giao việc, coordinator gọi công cụ Task với hai thông tin chính: chọn loại agent con nào (<code>subagent_type</code>) và nội dung nhiệm vụ (<code>prompt</code>). Nội dung nhiệm vụ là <b>toàn bộ</b> những gì agent con biết khi bắt đầu làm việc.</p>
+</section>
+<section class="adv-block">
+  <h4>Một mẫu phiếu giao việc rõ ràng</h4>
+  <pre><code>Mục tiêu: ...
+Thế nào là hoàn thành: ...
 Dữ liệu đầu vào:
-&lt;source id="S1" url="…" date="2025-09" title="…"&gt;
-  trích đoạn …
+&lt;source id="S1" url="..." date="2025-09"&gt;
+  đoạn trích ...
 &lt;/source&gt;
-Định dạng trả về: JSON {findings:[{claim, source_id, quote}]}
-Giới hạn: tối đa 8 phát hiện; không tìm nguồn mới.</code></pre>
-<ul>
-  <li>Thẻ XML tách <b>nội dung</b> khỏi <b>metadata</b> → subagent trích dẫn chính xác, synth giữ được nguồn.</li>
-  <li>Chỉ đưa dữ liệu <b>đã chọn lọc</b> — dán cả transcript coordinator vào là lãng phí và gây nhiễu.</li>
-</ul>
-<h4>⚡ Song song hóa đúng cách</h4>
-<ul>
-  <li>Song song khi các nhiệm vụ <b>độc lập</b> (các mảng chủ đề khác nhau). Phụ thuộc dữ liệu (synth cần kết quả search) → tuần tự.</li>
-  <li>Độ trễ song song ≈ subagent chậm nhất; tuần tự ≈ tổng.</li>
-  <li>Coordinator chỉ nhận <b>kết quả cuối</b> của mỗi subagent — yêu cầu kết quả đó có cấu trúc, gọn.</li>
-</ul>
-<h4>🎯 Prompt cho coordinator: mục tiêu, không phải kịch bản</h4>
-<p>“Bước 1 search A, bước 2 search B…” khiến hệ thống không thích ứng khi phát hiện mảng mới. Hãy nêu mục tiêu, tiêu chí chất lượng, ràng buộc (ngân sách, nguồn ưu tiên) và để coordinator tự phân rã.</p>`,
+Trả kết quả theo dạng: {findings: [{claim, source_id, quote}]}
+Giới hạn: tối đa 8 phát hiện, không tìm thêm nguồn mới.</code></pre>
+  <p>Các thẻ như <code>&lt;source&gt;</code> giúp tách rõ nội dung với thông tin nguồn, nhờ đó các bước sau trích dẫn chính xác. Chỉ đưa vào những dữ liệu đã chọn lọc; dán cả lịch sử trò chuyện của coordinator vào vừa tốn kém vừa gây nhiễu.</p>
+</section>
+<section class="adv-block">
+  <h4>Khi nào chạy song song, khi nào chạy lần lượt</h4>
+  <p>Chạy song song khi các phần việc <b>không phụ thuộc nhau</b>, ví dụ tìm kiếm bốn chủ đề khác nhau. Khi đó thời gian chờ bằng thời gian của agent con chậm nhất. Nếu một bước cần kết quả của bước khác, ví dụ tổng hợp cần kết quả tìm kiếm, thì phải chạy lần lượt.</p>
+  <p>Coordinator chỉ nhận về <b>kết quả cuối cùng</b> của mỗi agent con, không nhận các bước trung gian. Vì vậy hãy yêu cầu kết quả cuối đó gọn và có cấu trúc.</p>
+</section>`,
     traps: [
       {
-        title: "Synth “bịa” nguồn",
+        title: "Agent tổng hợp “bịa” nguồn",
         level: "hard",
-        scenario: "Coordinator gửi cho synth: “Tổng hợp các phát hiện ở trên thành báo cáo có trích nguồn.” Báo cáo có trích dẫn nhưng nhiều URL không tồn tại.",
-        bait: "Thêm vào prompt synth: “Chỉ dùng nguồn thật, không bịa”.",
-        why: "“Ở trên” là ngữ cảnh của coordinator — synth không nhìn thấy. Nó không có dữ liệu nguồn nên phải tự tạo.",
-        fix: ["Dán findings (kèm url/date) trực tiếp vào prompt Task của synth, bọc trong thẻ có cấu trúc.", "Yêu cầu synth chỉ trích dẫn theo <code>source_id</code> có trong input.", "Thêm bước kiểm tra: mọi url trong báo cáo phải thuộc tập nguồn đầu vào."],
+        scenario: "Coordinator giao cho agent tổng hợp: “Tổng hợp các phát hiện ở trên thành báo cáo có trích nguồn.” Báo cáo có trích dẫn, nhưng nhiều đường dẫn không tồn tại.",
+        bait: "Thêm vào hướng dẫn của agent tổng hợp: “chỉ dùng nguồn thật, không được bịa”.",
+        why: "Chữ “ở trên” chỉ có nghĩa với coordinator. Agent tổng hợp không nhìn thấy lịch sử của coordinator, nên nó không có dữ liệu nguồn nào và đành tự tạo ra.",
+        fix: ["Dán trực tiếp các phát hiện (kèm đường dẫn và ngày) vào nhiệm vụ giao cho agent tổng hợp, theo định dạng rõ ràng.", "Yêu cầu agent tổng hợp chỉ trích dẫn theo mã nguồn có trong dữ liệu được giao.", "Thêm bước kiểm tra tự động: mọi đường dẫn trong báo cáo phải thuộc danh sách nguồn đầu vào."],
       },
       {
-        title: "Coordinator không tạo được subagent",
-        scenario: "Đã khai báo <code>agents: {search, synth}</code> đầy đủ, nhưng coordinator chỉ tự làm mọi thứ, không bao giờ ủy thác.",
-        bait: "Viết lại description của subagent cho “hấp dẫn” hơn.",
-        why: "Coordinator gọi subagent qua công cụ Task. Nếu <code>allowedTools</code> không có \"Task\", nó không có công cụ để ủy thác.",
-        fix: ["Thêm \"Task\" vào allowedTools của coordinator.", "Sau đó mới tối ưu description để coordinator chọn đúng subagent."],
+        title: "Coordinator không bao giờ giao việc",
+        scenario: "Đã khai báo đầy đủ hai agent con là search và synth, nhưng coordinator vẫn tự làm mọi thứ và chưa lần nào giao việc.",
+        bait: "Viết lại mô tả của agent con cho hấp dẫn hơn.",
+        why: "Coordinator giao việc thông qua công cụ Task. Nếu danh sách <code>allowedTools</code> của nó không có \"Task\", nó không có công cụ nào để giao việc.",
+        fix: ["Thêm \"Task\" vào allowedTools của coordinator.", "Sau đó mới tinh chỉnh mô tả để coordinator chọn đúng agent con."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Subagent synth cần biết cả kết quả của search lẫn các bước trung gian search đã thử (truy vấn nào không ra kết quả). Thiết kế nào đúng?",
-        options: ["Bật chia sẻ ngữ cảnh giữa các subagent", "Yêu cầu search trả về output có cấu trúc gồm findings và attempted_queries; coordinator chuyển cả hai vào prompt của synth", "Cho synth đọc transcript của search", "Cho synth quyền WebSearch để tự kiểm tra lại"],
+        q: "Agent tổng hợp cần biết cả kết quả tìm kiếm lẫn những truy vấn mà agent tìm kiếm đã thử nhưng không ra kết quả. Thiết kế nào đúng?",
+        options: ["Bật chế độ chia sẻ ngữ cảnh giữa các agent con", "Yêu cầu agent tìm kiếm trả về kết quả có cấu trúc gồm cả phát hiện và các truy vấn đã thử; coordinator chuyển cả hai cho agent tổng hợp", "Cho agent tổng hợp đọc toàn bộ nhật ký của agent tìm kiếm", "Cho agent tổng hợp quyền tìm kiếm web để tự kiểm tra"],
         answer: 1,
-        explain: "Coordinator chỉ nhận kết quả cuối của subagent. Muốn chuyển thông tin gì thì phải yêu cầu nó nằm trong kết quả cuối và truyền tường minh.",
-        notes: ["Không có cơ chế chia sẻ ngữ cảnh tự động giữa subagent.", "Đúng: thiết kế output có cấu trúc + truyền tường minh.", "Phá vỡ cô lập; transcript dài, nhiều nhiễu.", "Synth đi tìm lại là lặp việc và ra ngoài vai trò."],
-        trap: "Phương án A nghe như một tính năng có thật — nhưng cô lập ngữ cảnh là thiết kế có chủ đích.",
+        explain: "Coordinator chỉ nhận kết quả cuối của agent con. Muốn truyền thông tin gì thì phải yêu cầu thông tin đó nằm trong kết quả cuối, rồi chuyển đi một cách rõ ràng.",
+        notes: ["Không có cơ chế tự động chia sẻ ngữ cảnh giữa các agent con.", "Đúng: thiết kế kết quả có cấu trúc và truyền đi rõ ràng.", "Nhật ký dài, nhiều thông tin thừa, và phá vỡ việc tách ngữ cảnh.", "Agent tổng hợp đi tìm lại là làm trùng việc và vượt vai trò."],
+        trap: "Phương án A nghe như một tính năng có thật, nhưng việc tách ngữ cảnh giữa các agent con là thiết kế có chủ đích.",
       },
     ],
   },
@@ -230,66 +201,67 @@ Giới hạn: tối đa 8 phát hiện; không tìm nguồn mới.</code></pre>
   "1-4": {
     widgets: ["refundGate", "enforcement"],
     advanced: `
-<h4>🪜 Thang độ mạnh của cơ chế ép buộc</h4>
-<div class="dg v dg-anim">
-  <div class="dn"><b>📝 Chỉ dẫn trong prompt</b>xác suất — tốt cho hành vi mềm</div><span class="da">↓ mạnh hơn</span>
-  <div class="dn"><b>🧪 Few-shot ví dụ</b>xác suất cao hơn với ca mơ hồ</div><span class="da">↓</span>
-  <div class="dn"><b>🧰 Thiết kế công cụ</b>không cấp công cụ = không thể làm (process_refund chỉ cho agent được phép)</div><span class="da">↓</span>
-  <div class="dn hot"><b>🛡️ Cổng kiểm tra trong code công cụ / hook</b>deterministic — kiểm tra điều kiện trước khi thực thi</div><span class="da">↓</span>
-  <div class="dn good"><b>🔐 Hệ thống quyền bên ngoài</b>token, IAM, giới hạn ở API Billing — kể cả khi agent bị compromise</div>
-</div>
-<h4>🔑 Trạng thái xác minh phải sống ở server</h4>
-<ul>
-  <li>Đúng: backend ghi <code>verified_customer_id</code> khi <b>kết quả</b> get_customer khớp; gate đọc giá trị này.</li>
-  <li>Sai: thêm tham số <code>verified: true</code> vào process_refund để Claude tự khai — model (hoặc prompt injection) có thể khai sai.</li>
-  <li>Thông báo lỗi của gate nên chỉ <b>bước tiếp theo</b> (“gọi get_customer trước”) để Claude tự sửa thay vì thử lại vô ích.</li>
-  <li>Hành động tiền tệ: dùng <b>idempotency key</b> (ví dụ id của tool_use) để retry không thực thi hai lần.</li>
-</ul>
-<h4>🤝 Mẫu bản bàn giao (handoff) cho người thật</h4>
-<pre><code>{
+<section class="adv-block">
+  <h4>Các mức độ bắt buộc, từ mềm tới cứng</h4>
+  <ol class="steps-dg">
+    <li><b>Dặn trong prompt.</b> Phần lớn các lần sẽ đúng. Phù hợp với yêu cầu mềm như giọng văn.</li>
+    <li><b>Đưa ví dụ mẫu.</b> Giúp model xử lý đúng hơn những trường hợp dễ nhầm, nhưng vẫn chỉ là xác suất.</li>
+    <li><b>Không cấp công cụ.</b> Agent nào không được phép hoàn tiền thì không có công cụ hoàn tiền.</li>
+    <li class="hot"><b>Kiểm tra bằng code</b> trong công cụ hoặc trong hook, trước khi hành động. Kết quả chắc chắn.</li>
+    <li class="good"><b>Phân quyền ở hệ thống phía sau</b>, ví dụ API thanh toán tự giới hạn số tiền. Vẫn an toàn kể cả khi agent bị lừa.</li>
+  </ol>
+</section>
+<section class="adv-block">
+  <h4>Trạng thái “đã xác minh” phải do hệ thống ghi nhận</h4>
+  <p>Cách đúng: khi công cụ tra cứu khách hàng trả về kết quả khớp, chương trình của bạn tự ghi lại “khách C-88 đã được xác minh” vào bộ nhớ của phiên. Công cụ hoàn tiền đọc thông tin này để quyết định có cho chạy hay không.</p>
+  <p>Cách sai: thêm một tham số <code>verified: true</code> để Claude tự điền khi gọi công cụ hoàn tiền. Model có thể điền sai, và kẻ xấu có thể lừa model điền “đã xác minh” bằng một câu như “tôi đã xác minh rồi”.</p>
+  <p>Khi chặn, hãy nói rõ bước tiếp theo cần làm, ví dụ “cần gọi get_customer trước”, để Claude tự sửa hướng thay vì thử lại vô ích.</p>
+</section>
+<section class="adv-block">
+  <h4>Một bản bàn giao tốt trông như thế nào</h4>
+  <pre><code>{
   "customer_id": "C-88", "verified": true,
-  "issue": "double_charge", "order_id": "8812",
+  "issue": "bị trừ tiền hai lần", "order_id": "8812",
   "facts": {"amount_each": 1250000, "count": 2, "date": "2026-10-03"},
-  "root_cause": "Cổng thanh toán retry khi timeout",
-  "actions_taken": ["xác minh qua email", "xác nhận 2 giao dịch"],
-  "recommended_action": "hoàn 1.250.000đ cho giao dịch ch_2",
-  "transcript_url": "…"
+  "actions_taken": ["xác minh qua email", "xác nhận hai giao dịch trùng"],
+  "recommended_action": "hoàn 1.250.000đ cho giao dịch thứ hai",
+  "transcript_url": "..."
 }</code></pre>
-<h4>🧩 Tin nhắn nhiều vấn đề</h4>
-<p>“Đổi địa chỉ, hỏi hoàn tiền đơn cũ và báo lỗi app”: tách thành 3 mục, xử lý từng mục (song song nếu độc lập) với chung ngữ cảnh khách, rồi trả <b>một</b> câu trả lời tổng hợp có cấu trúc — không bỏ sót mục nào.</p>`,
+  <p>Nhân viên đọc vài dòng là nắm được vụ việc và làm được ngay. Đường dẫn tới toàn bộ cuộc trò chuyện vẫn được đính kèm, để tra cứu khi thật sự cần.</p>
+</section>`,
     traps: [
       {
-        title: "Để model tự khai đã xác minh",
+        title: "Để model tự khai là đã xác minh",
         level: "hard",
-        scenario: "Để “ép” xác minh, team thêm tham số bắt buộc <code>verified_customer: boolean</code> vào schema của process_refund và kiểm tra <code>if not input.verified_customer: reject</code>.",
-        bait: "Nghĩ rằng đây là cổng kiểm tra bằng code nên đã đủ an toàn.",
-        why: "Giá trị kiểm tra đến từ chính model. Model có thể điền <code>true</code> khi chưa xác minh; kẻ xấu có thể dụ bằng prompt injection “tôi đã xác minh rồi”.",
-        fix: ["Xóa tham số tự khai.", "Backend ghi trạng thái xác minh dựa trên kết quả CRM vào session server-side.", "Gate đọc trạng thái server-side; kiểm tra thêm đơn hàng thuộc đúng khách đã xác minh."],
+        scenario: "Để bắt agent xác minh trước khi hoàn tiền, nhóm thêm một tham số bắt buộc <code>verified_customer</code> (đúng/sai) vào công cụ hoàn tiền, và từ chối nếu giá trị là sai.",
+        bait: "Nghĩ rằng đây đã là kiểm tra bằng code nên đủ an toàn.",
+        why: "Giá trị được kiểm tra lại do chính model điền vào. Model có thể điền “đúng” khi chưa xác minh, và kẻ xấu có thể dụ model điền như vậy.",
+        fix: ["Xóa tham số do model tự khai.", "Chương trình tự ghi nhận trạng thái xác minh dựa trên kết quả tra cứu từ hệ thống khách hàng.", "Công cụ hoàn tiền đọc trạng thái do chương trình ghi nhận, và kiểm tra thêm đơn hàng có đúng là của khách đó không."],
       },
       {
-        title: "Gate chặn nhưng agent lặp mãi",
-        scenario: "Gate trả <code>{\"error\":\"forbidden\"}</code>. Claude gọi lại process_refund 6 lần rồi xin lỗi khách “hệ thống đang lỗi”.",
-        bait: "Thêm vào prompt “nếu bị forbidden thì đừng thử lại”.",
-        why: "Lỗi không nói lý do và cách khắc phục — Claude không biết phải xác minh trước.",
-        fix: ["Lỗi có cấu trúc: <code>precondition_failed</code>, isRetryable sau khi thỏa điều kiện, hướng dẫn “gọi get_customer”.", "Phát hiện lặp ở backend như lưới an toàn."],
+        title: "Bị chặn nhưng agent cứ thử lại mãi",
+        scenario: "Khi bị chặn, công cụ trả về <code>{\"error\":\"forbidden\"}</code>. Claude gọi lại lệnh hoàn tiền sáu lần, rồi xin lỗi khách rằng hệ thống đang gặp sự cố.",
+        bait: "Thêm vào prompt: “nếu bị forbidden thì đừng thử lại”.",
+        why: "Thông báo lỗi không nói vì sao bị chặn và cần làm gì, nên Claude không biết là phải xác minh khách trước.",
+        fix: ["Trả lỗi rõ ràng: thiếu điều kiện gì, và gợi ý bước tiếp theo, ví dụ “hãy hỏi email của khách rồi gọi get_customer”.", "Ở phía chương trình, phát hiện việc thử lại liên tục để làm lưới an toàn."],
       },
       {
-        title: "Bàn giao bằng transcript thô",
-        scenario: "Escalate gửi cho nhân viên 140 tin nhắn transcript. Thời gian xử lý trung bình của nhân viên tăng gấp đôi, khách phải kể lại.",
-        bait: "Thêm bản tóm tắt văn xuôi 1 câu ở đầu transcript.",
-        why: "Nhân viên cần số liệu chính xác và việc đã làm để hành động ngay; văn xuôi ngắn vẫn mất chi tiết.",
-        fix: ["Bản bàn giao có schema: định danh, dữ kiện, nguyên nhân, việc đã làm, đề xuất.", "Đính kèm link transcript để tra khi cần, không bắt đọc."],
+        title: "Bàn giao bằng nguyên đoạn chat",
+        scenario: "Khi chuyển cho nhân viên, hệ thống gửi kèm 140 tin nhắn. Thời gian xử lý của nhân viên tăng gấp đôi, và khách phải kể lại từ đầu.",
+        bait: "Thêm một câu tóm tắt ở đầu đoạn chat.",
+        why: "Một câu tóm tắt vẫn thiếu những con số và thông tin “đã làm gì” mà nhân viên cần để xử lý ngay.",
+        fix: ["Dùng bản bàn giao có cấu trúc: khách là ai, dữ kiện, nguyên nhân, việc đã làm, đề xuất.", "Đính kèm đường dẫn tới đoạn chat để tra khi cần, không bắt nhân viên đọc."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Đội ngũ thêm tham số verified: true vào process_refund và từ chối nếu tham số là false. Vẫn có ca hoàn tiền cho khách chưa xác minh. Lỗi thiết kế cốt lõi là gì?",
-        options: ["Thiếu few-shot ví dụ xác minh", "Điều kiện kiểm tra dựa trên giá trị do model tự cung cấp thay vì trạng thái xác minh do backend ghi nhận", "Nên dùng PostToolUse thay vì kiểm tra trong công cụ", "Model quá nhỏ"],
+        q: "Nhóm thêm tham số verified: true vào công cụ hoàn tiền và từ chối nếu tham số là false. Vẫn có trường hợp hoàn tiền cho khách chưa xác minh. Lỗi thiết kế cốt lõi là gì?",
+        options: ["Thiếu ví dụ mẫu về việc xác minh", "Điều kiện kiểm tra dựa vào giá trị do model tự điền, thay vì trạng thái xác minh do hệ thống ghi nhận", "Nên dùng PostToolUse thay vì kiểm tra trong công cụ", "Model quá nhỏ"],
         answer: 1,
-        explain: "Một cổng kiểm tra chỉ đáng tin khi dữ liệu nó kiểm tra không do model kiểm soát.",
-        notes: ["Vẫn là xác suất.", "Đúng: gate phải đọc trạng thái server-side.", "PostToolUse chạy sau khi tiền đã đi.", "Model lớn hơn vẫn có thể khai sai hoặc bị injection."],
-        trap: "Phương án sai trông giống “ép buộc bằng code” nên dễ được coi là đủ.",
+        explain: "Một bước kiểm tra chỉ đáng tin khi dữ liệu nó kiểm tra không nằm trong tay model.",
+        notes: ["Thêm ví dụ vẫn chỉ cải thiện theo xác suất.", "Đúng: phải đọc trạng thái do chương trình ghi nhận.", "PostToolUse chạy sau khi tiền đã được chuyển.", "Model lớn hơn vẫn có thể điền sai hoặc bị lừa."],
+        trap: "Cách làm sai này trông giống “kiểm tra bằng code” nên dễ được coi là đủ.",
       },
     ],
   },
@@ -297,60 +269,45 @@ Giới hạn: tối đa 8 phát hiện; không tìm nguồn mới.</code></pre>
   /* ─────────────── 1-5 ─────────────── */
   "1-5": {
     advanced: `
-<h4>🪝 Các sự kiện hook thường gặp</h4>
-<table class="t">
-  <tr><th>Sự kiện</th><th>Thời điểm</th><th>Dùng để</th></tr>
-  <tr><td><code>PreToolUse</code></td><td>Trước khi công cụ chạy</td><td>Chặn (deny), cho phép (allow), hỏi (ask), sửa input (<code>updatedInput</code>)</td></tr>
-  <tr><td><code>PostToolUse</code></td><td>Sau khi công cụ trả kết quả</td><td>Chuẩn hóa/bổ sung ngữ cảnh, ghi log, kiểm tra output</td></tr>
-  <tr><td><code>UserPromptSubmit</code></td><td>Khi người dùng gửi prompt</td><td>Thêm ngữ cảnh, chặn prompt vi phạm</td></tr>
-  <tr><td><code>Stop</code> / <code>SubagentStop</code></td><td>Khi agent/subagent định dừng</td><td>Kiểm tra điều kiện hoàn thành (ví dụ test phải pass)</td></tr>
-  <tr><td><code>PreCompact</code>, <code>SessionStart</code>, <code>SessionEnd</code>, <code>Notification</code></td><td>Vòng đời phiên</td><td>Lưu trạng thái, nạp ngữ cảnh, thông báo</td></tr>
-</table>
-<h4>🎯 Matcher</h4>
-<ul>
-  <li>So với tên công cụ, phân biệt hoa thường. Chuỗi đơn giản khớp <b>chính xác</b>; có thể dùng regex: <code>Edit|Write</code>, <code>mcp__billing__.*</code>.</li>
-  <li>Công cụ MCP mang tên đầy đủ <code>mcp__&lt;server&gt;__&lt;tool&gt;</code> — matcher <code>process_refund</code> sẽ <b>không</b> khớp <code>mcp__billing__process_refund</code>.</li>
-</ul>
-<h4>🔀 Hook trong Agent SDK và trong Claude Code</h4>
-<table class="t">
-  <tr><th></th><th>Agent SDK</th><th>Claude Code (settings.json)</th></tr>
-  <tr><td>Hình thức</td><td>Hàm callback trong code</td><td>Lệnh shell (command) khai báo trong settings</td></tr>
-  <tr><td>Đầu vào</td><td>Object input (hook_event_name, tool_name, tool_input…)</td><td>JSON qua stdin, cùng các trường</td></tr>
-  <tr><td>Chặn</td><td>Trả <code>permissionDecision: "deny"</code> + lý do</td><td>Exit code 2 (stderr chuyển cho Claude) hoặc JSON quyết định trên stdout</td></tr>
-</table>
-<h4>⚖️ Hook vs kiểm tra trong công cụ vs quyền</h4>
-<ul>
-  <li><b>Kiểm tra trong code công cụ</b>: gắn chặt với một công cụ; tốt cho tiền điều kiện nghiệp vụ.</li>
-  <li><b>Hook</b>: chính sách cắt ngang nhiều công cụ (giới hạn tiền cho mọi công cụ billing, chuẩn hóa ngày cho mọi server MCP), không phải sửa từng công cụ — đặc biệt với MCP server của bên thứ ba bạn không sửa được.</li>
-  <li><b>Quyền (allow/deny list, permission mode)</b>: chặn cả công cụ, không xét tham số.</li>
-</ul>
-<h4>⏱️ Lưu ý vận hành</h4>
-<ul><li>Hook chạy trên đường nóng của mỗi lần gọi công cụ → giữ nhanh, có timeout, xử lý lỗi của chính hook (hook lỗi không được làm sập agent).</li></ul>`,
+<section class="adv-block">
+  <h4>Hook nhận được gì và trả lại gì</h4>
+  <p>Khi một công cụ sắp chạy, hook PreToolUse nhận được tên công cụ (<code>tool_name</code>) và các tham số Claude định truyền vào (<code>tool_input</code>). Hook có thể trả lại một trong ba quyết định: <code>allow</code> (cho chạy), <code>deny</code> (chặn, kèm lý do) hoặc <code>ask</code> (hỏi người dùng). Khi chặn, lý do được chuyển cho Claude để nó đổi hướng, ví dụ chuyển sang quy trình duyệt.</p>
+  <p>Hook PostToolUse nhận thêm kết quả của công cụ (<code>tool_response</code>), và có thể bổ sung hoặc chỉnh lại thông tin trước khi Claude đọc.</p>
+</section>
+<section class="adv-block">
+  <h4>Tên công cụ phải khớp chính xác</h4>
+  <p>Mỗi hook có một <code>matcher</code> để chỉ định nó áp dụng cho công cụ nào. Nếu ghi một tên đơn giản, nó phải khớp chính xác. Riêng công cụ đến từ máy chủ MCP có tên đầy đủ dạng <code>mcp__&lt;tên-máy-chủ&gt;__&lt;tên-công-cụ&gt;</code>. Vì vậy matcher <code>process_refund</code> sẽ <b>không</b> khớp với <code>mcp__billing__process_refund</code>, và hook không bao giờ chạy. Có thể dùng biểu thức như <code>mcp__billing__.*</code> để áp dụng cho mọi công cụ của máy chủ billing.</p>
+</section>
+<section class="adv-block">
+  <h4>Khi nào dùng hook, khi nào kiểm tra ngay trong công cụ</h4>
+  <p>Nếu quy tắc chỉ liên quan tới một công cụ và bạn sửa được code của công cụ đó, kiểm tra ngay bên trong công cụ là đủ. Hook phù hợp hơn khi quy tắc áp dụng chung cho nhiều công cụ (ví dụ chuẩn hóa ngày tháng cho mọi máy chủ MCP), hoặc khi công cụ do bên thứ ba viết và bạn không sửa được.</p>
+  <p>Hook chạy ở mỗi lần gọi công cụ, nên cần chạy nhanh và tự xử lý lỗi của chính nó, để một lỗi trong hook không làm dừng cả agent.</p>
+</section>`,
     traps: [
       {
         title: "Hook không bao giờ chạy",
         level: "hard",
-        scenario: "Team cấu hình <code>PreToolUse: [{matcher: \"process_refund\", hooks: [limit]}]</code>. Công cụ hoàn tiền đến từ MCP server <code>billing</code>. Hoàn $900 vẫn lọt qua; log không thấy hook được gọi.",
-        bait: "Nghĩ hook có lỗi logic, sửa điều kiện <code>amount > 500</code>.",
-        why: "Tên thực của công cụ là <code>mcp__billing__process_refund</code>. Matcher chuỗi đơn giản khớp chính xác nên không khớp.",
-        fix: ["Dùng tên đầy đủ hoặc regex: <code>mcp__billing__process_refund</code> / <code>mcp__billing__.*</code>.", "Viết test: giả lập một lần gọi công cụ và khẳng định hook được kích hoạt.", "Log khi hook chạy để phát hiện sớm."],
+        scenario: "Nhóm cấu hình hook PreToolUse với <code>matcher: \"process_refund\"</code>. Công cụ hoàn tiền đến từ máy chủ MCP tên <code>billing</code>. Lệnh hoàn $900 vẫn lọt qua, và nhật ký không ghi nhận lần nào hook được gọi.",
+        bait: "Nghĩ rằng điều kiện trong hook bị sai, rồi đi sửa phép so sánh số tiền.",
+        why: "Tên thật của công cụ là <code>mcp__billing__process_refund</code>. Matcher dạng tên đơn giản phải khớp chính xác, nên không khớp và hook không được gọi.",
+        fix: ["Ghi tên đầy đủ hoặc dùng biểu thức: <code>mcp__billing__process_refund</code> hoặc <code>mcp__billing__.*</code>.", "Viết một bài test giả lập lời gọi công cụ và kiểm tra hook có được gọi hay không.", "Ghi nhật ký mỗi khi hook chạy để phát hiện sớm."],
       },
       {
-        title: "Chặn bằng PostToolUse",
-        scenario: "Kỹ sư đặt kiểm tra hạn mức trong PostToolUse: nếu amount > 500 thì trả lỗi cho Claude.",
-        bait: "“Dù sao cũng chặn được Claude báo thành công cho khách.”",
-        why: "PostToolUse chạy <b>sau</b> khi process_refund đã thực thi — tiền đã chuyển. Chặn hành động phải ở PreToolUse.",
-        fix: ["Di chuyển kiểm tra sang PreToolUse với deny + lý do.", "PostToolUse chỉ dùng cho xử lý kết quả (chuẩn hóa, ghi log)."],
+        title: "Chặn hoàn tiền bằng PostToolUse",
+        scenario: "Một kỹ sư đặt phép kiểm tra hạn mức vào PostToolUse: nếu số tiền lớn hơn 500 thì báo lỗi cho Claude.",
+        bait: "Nghĩ rằng ít nhất cũng ngăn được Claude báo “thành công” cho khách.",
+        why: "PostToolUse chạy sau khi công cụ hoàn tiền đã thực thi, tức là tiền đã được chuyển. Muốn ngăn hành động thì phải chặn trước khi nó xảy ra.",
+        fix: ["Chuyển phép kiểm tra sang PreToolUse, trả về quyết định deny kèm lý do.", "Chỉ dùng PostToolUse để xử lý kết quả: chuẩn hóa, ghi nhật ký."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Agent dùng 3 MCP server của bên thứ ba (không sửa được mã) trả về ngày theo 3 định dạng. Bạn cần mọi ngày tới Claude đều là ISO 8601. Cách tốt nhất?",
-        options: ["Fork cả 3 server để sửa định dạng", "Hook PostToolUse với matcher mcp__.* chuẩn hóa ngày trong kết quả trước khi tới model", "Dặn Claude trong system prompt tự quy đổi", "Hook PreToolUse yêu cầu server trả ISO"],
+        q: "Agent dùng ba máy chủ MCP do bên thứ ba viết (không sửa được code), mỗi máy chủ trả ngày tháng theo một định dạng khác nhau. Bạn muốn mọi ngày tháng tới tay Claude đều theo cùng một định dạng. Cách tốt nhất?",
+        options: ["Tự sao chép và sửa code cả ba máy chủ", "Hook PostToolUse áp dụng cho mọi công cụ MCP, chuẩn hóa ngày tháng trong kết quả trước khi tới Claude", "Dặn Claude trong system prompt tự quy đổi", "Hook PreToolUse yêu cầu máy chủ trả đúng định dạng"],
         answer: 1,
-        explain: "PostToolUse là điểm chặn cắt ngang mọi công cụ MCP, xử lý deterministic mà không cần sửa server.",
-        notes: ["Tốn công bảo trì, phải theo dõi upstream.", "Đúng: một hook, mọi server.", "Chỉ cho tuân thủ xác suất.", "PreToolUse chạy trước khi có kết quả, không đổi được định dạng server trả."],
+        explain: "PostToolUse là điểm xử lý chung cho mọi công cụ MCP, cho kết quả nhất quán mà không cần sửa máy chủ.",
+        notes: ["Tốn công bảo trì lâu dài, phải theo dõi mọi bản cập nhật của bên thứ ba.", "Đúng: một hook xử lý cho mọi máy chủ.", "Chỉ làm đúng theo xác suất.", "PreToolUse chạy trước khi có kết quả, không đổi được định dạng máy chủ trả về."],
       },
     ],
   },
@@ -359,55 +316,46 @@ Giới hạn: tối đa 8 phát hiện; không tìm nguồn mới.</code></pre>
   "1-6": {
     widgets: ["decomposition", "sessionBranches"],
     advanced: `
-<h4>🧩 Các mẫu phân rã thường gặp</h4>
-<table class="t">
-  <tr><th>Mẫu</th><th>Mô tả</th><th>Ví dụ</th></tr>
-  <tr><td>Prompt chaining</td><td>Chuỗi bước cố định, output bước trước là input bước sau; có thể chèn kiểm tra giữa các bước</td><td>Trích xuất → kiểm tra → định dạng</td></tr>
-  <tr><td>Orchestrator–workers (động)</td><td>Coordinator sinh tác vụ con theo phát hiện</td><td>Điều tra bug, nghiên cứu mở</td></tr>
-  <tr><td>Song song hóa (sectioning)</td><td>Chia phần độc lập chạy đồng thời rồi gộp</td><td>Review từng file</td></tr>
-  <tr><td>Evaluator–optimizer</td><td>Một bên sinh, một bên đánh giá theo tiêu chí, lặp lại</td><td>Viết lại tài liệu tới khi đạt rubric</td></tr>
-</table>
-<h4>🗂️ Review PR lớn: per-file + integration</h4>
-<div class="dg dg-anim">
-  <div class="dn"><span class="i">📄</span><b>Lượt per-file</b>mỗi file một ngữ cảnh tập trung</div><span class="da">→</span>
-  <div class="dn"><span class="i">📋</span><b>Tóm tắt giao diện</b>hàm export, schema, giả định của từng file</div><span class="da">→</span>
-  <div class="dn hot"><span class="i">🔗</span><b>Lượt tích hợp</b>luồng dữ liệu, hợp đồng giữa module</div>
-</div>
-<h4>🧭 Quản lý phiên trong Claude Code / SDK</h4>
-<table class="t">
-  <tr><th>Thao tác</th><th>Lệnh</th><th>Dùng khi</th></tr>
-  <tr><td>Tiếp tục phiên gần nhất</td><td><code>claude --continue</code></td><td>Quay lại ngay việc vừa làm</td></tr>
-  <tr><td>Tiếp tục phiên chỉ định</td><td><code>claude --resume &lt;id|tên&gt;</code></td><td>Điều tra dài nhiều ngày, code không đổi nhiều</td></tr>
-  <tr><td>Rẽ nhánh</td><td><code>forkSession</code> khi resume (SDK)</td><td>Thử nhiều hướng từ cùng baseline</td></tr>
-  <tr><td>Phiên mới + tóm tắt</td><td>phiên mới, dán summary</td><td>Code đã đổi, ngữ cảnh cũ lỗi thời hoặc quá đầy</td></tr>
-</table>
-<p>Dấu hiệu nên bỏ phiên cũ: nhiều file đã bị sửa từ lần đọc trước; Claude nhắc tới hàm/đường dẫn không còn tồn tại; ngữ cảnh gần đầy.</p>`,
+<section class="adv-block">
+  <h4>Review thay đổi lớn theo hai lượt</h4>
+  <ol class="steps-dg">
+    <li><b>Lượt xem từng file.</b> Mỗi file được xem riêng trong một lần gọi, để sự chú ý không bị chia sẻ cho các file khác.</li>
+    <li><b>Tóm tắt phần giao tiếp.</b> Từ mỗi file, rút ra những gì file khác cần biết: hàm nào được dùng bên ngoài, dữ liệu có dạng gì, file đó đang giả định điều gì.</li>
+    <li class="hot"><b>Lượt xem liên kết.</b> Đọc các bản tóm tắt đó cùng lúc để tìm lỗi ở chỗ nối giữa các file, ví dụ một bên gửi dữ liệu chưa chuẩn hóa trong khi bên kia giả định đã chuẩn hóa.</li>
+  </ol>
+</section>
+<section class="adv-block">
+  <h4>Chọn cách quản lý phiên</h4>
+  <p><b>Tiếp tục phiên cũ</b> (<code>claude --continue</code> cho phiên gần nhất, <code>claude --resume &lt;tên&gt;</code> cho một phiên cụ thể) phù hợp khi bạn quay lại công việc mà code chưa thay đổi nhiều.</p>
+  <p><b>Tách nhánh</b> (fork) phù hợp khi bạn đã khảo sát xong và muốn thử hai hướng khác nhau từ cùng điểm xuất phát, mà không để hai hướng ảnh hưởng lẫn nhau.</p>
+  <p><b>Mở phiên mới kèm bản tóm tắt</b> phù hợp khi code đã đổi nhiều, hoặc phiên cũ đã quá dài. Dấu hiệu nên bỏ phiên cũ: Claude nhắc tới hàm hay file không còn tồn tại, hoặc ngữ cảnh đã gần đầy.</p>
+</section>`,
     traps: [
       {
-        title: "Resume sau đợt refactor lớn",
+        title: "Mở lại phiên cũ sau một đợt sửa code lớn",
         level: "hard",
-        scenario: "Thứ Hai bạn điều tra bug thanh toán trong phiên <code>pay-bug</code>. Thứ Tư đồng nghiệp tách <code>PaymentService</code> thành 3 file. Bạn <code>--resume pay-bug</code>, Claude tự tin đề xuất sửa dòng 142 của <code>PaymentService.ts</code> — file đó không còn tồn tại.",
-        bait: "Tiếp tục hỏi trong phiên cũ và nhắc “file đã đổi rồi”.",
-        why: "Ngữ cảnh chứa hàng chục kết quả Read/Grep lỗi thời. Một câu nhắc không xóa được chúng; Claude vẫn lập luận trên dữ liệu cũ.",
-        fix: ["Yêu cầu phiên cũ (hoặc tự viết) bản tóm tắt phát hiện: giả thuyết, bằng chứng, việc đã loại trừ.", "Mở phiên mới, dán tóm tắt + danh sách file đã đổi (git diff --stat).", "Đọc lại code hiện tại trước khi kết luận."],
+        scenario: "Thứ Hai bạn điều tra lỗi thanh toán trong phiên <code>pay-bug</code>. Thứ Tư, đồng nghiệp tách <code>PaymentService</code> thành ba file. Bạn mở lại phiên cũ, và Claude tự tin đề xuất sửa dòng 142 của <code>PaymentService.ts</code>, một file không còn tồn tại.",
+        bait: "Cứ hỏi tiếp trong phiên cũ, và nhắc Claude rằng “file đã thay đổi rồi”.",
+        why: "Phiên cũ chứa hàng chục kết quả đọc file đã lỗi thời. Một câu nhắc không xóa được những thông tin đó, nên Claude vẫn lập luận dựa trên phiên bản code cũ.",
+        fix: ["Lấy từ phiên cũ (hoặc tự viết) một bản tóm tắt: giả thuyết, bằng chứng, những khả năng đã loại trừ.", "Mở phiên mới, đưa vào bản tóm tắt và danh sách file đã thay đổi (ví dụ kết quả của <code>git diff --stat</code>).", "Yêu cầu Claude đọc lại code hiện tại trước khi kết luận."],
       },
       {
-        title: "Dùng phân rã động cho pipeline cố định",
-        scenario: "Pipeline trích xuất hóa đơn (OCR → trích → kiểm tổng) được chuyển sang coordinator “tự quyết bước tiếp theo”. Kết quả: thỉnh thoảng bỏ qua bước kiểm tổng.",
-        bait: "Thêm vào prompt coordinator “nhớ luôn kiểm tổng”.",
-        why: "Các bước đã biết trước và bắt buộc → prompt chaining cố định cho tính dự đoán được; linh hoạt ở đây chỉ thêm rủi ro.",
-        fix: ["Trở về chuỗi cố định trong code.", "Dùng Claude cho từng bước, không cho việc điều phối các bước bắt buộc."],
+        title: "Dùng cách chia việc linh hoạt cho một quy trình cố định",
+        scenario: "Quy trình trích xuất hóa đơn (đọc ảnh, trích các trường, kiểm tra tổng) được chuyển sang để coordinator tự quyết định bước tiếp theo. Kết quả là thỉnh thoảng bước kiểm tra tổng bị bỏ qua.",
+        bait: "Thêm vào hướng dẫn của coordinator: “nhớ luôn kiểm tra tổng tiền”.",
+        why: "Các bước đã biết trước và đều bắt buộc, nên một chuỗi cố định đáng tin cậy hơn. Để model tự quyết ở đây chỉ thêm rủi ro.",
+        fix: ["Quay lại chuỗi bước cố định, viết bằng code.", "Dùng Claude cho từng bước, nhưng không giao cho Claude việc quyết định có làm các bước bắt buộc hay không."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Bạn muốn so sánh hai hướng tối ưu (cache Redis vs cache in-memory) sau khi đã khảo sát kỹ codebase trong một phiên. Code không thay đổi. Cách hiệu quả nhất?",
-        options: ["Mở hai phiên mới và khảo sát lại từ đầu", "Fork phiên khảo sát thành hai nhánh, mỗi nhánh thử một hướng", "Làm cả hai hướng tuần tự trong cùng một phiên", "Resume phiên và để Claude tự chọn hướng"],
+        q: "Bạn đã khảo sát kỹ codebase trong một phiên và muốn so sánh hai hướng tối ưu: dùng Redis hay dùng bộ nhớ trong. Code không thay đổi gì. Cách hiệu quả nhất?",
+        options: ["Mở hai phiên mới và khảo sát lại từ đầu", "Tách phiên khảo sát thành hai nhánh, mỗi nhánh thử một hướng", "Làm lần lượt cả hai hướng trong cùng một phiên", "Mở lại phiên và để Claude tự chọn một hướng"],
         answer: 1,
-        explain: "Fork giữ nguyên baseline khảo sát (vẫn còn đúng vì code không đổi) và cô lập hai hướng thử nghiệm.",
-        notes: ["Lãng phí công khảo sát.", "Đúng.", "Hai hướng làm bẩn ngữ cảnh của nhau.", "Không so sánh được hai hướng độc lập."],
-        trap: "Nếu đề nói code đã đổi nhiều thì đáp án sẽ chuyển sang “phiên mới + tóm tắt” — đọc kỹ điều kiện.",
+        explain: "Tách nhánh giữ nguyên phần khảo sát (vẫn còn đúng vì code không đổi) và cho hai hướng thử nghiệm chạy độc lập.",
+        notes: ["Lãng phí công khảo sát đã làm.", "Đúng.", "Hai hướng làm lẫn ngữ cảnh của nhau.", "Không so sánh được hai hướng một cách độc lập."],
+        trap: "Nếu đề nói code đã thay đổi nhiều, đáp án sẽ chuyển thành “mở phiên mới kèm bản tóm tắt”. Hãy đọc kỹ điều kiện.",
       },
     ],
   },

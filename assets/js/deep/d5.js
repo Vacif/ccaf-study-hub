@@ -4,54 +4,50 @@ window.DEEP_ADD({
   "5-1": {
     widgets: ["contextAssembly", "contextWindow"],
     advanced: `
-<h4>🧱 Bố cục ngữ cảnh khuyến nghị cho agent phiên dài</h4>
-<div class="dg v dg-anim">
-  <div class="dn"><b>⚙️ system + tools</b>tĩnh → đặt đầu, cache được</div>
-  <div class="dn hot"><b>📌 &lt;case_facts&gt;</b>dữ kiện chính xác (số tiền, ngày, mã) — không bao giờ tóm tắt</div>
-  <div class="dn"><b>🗜️ &lt;summary&gt;</b>các lượt cũ đã nén</div>
-  <div class="dn"><b>💬 các lượt gần nhất</b>nguyên văn</div>
-  <div class="dn"><b>🛠️ kết quả công cụ</b>đã cắt gọn về trường liên quan</div>
-</div>
-<h4>📉 Ba cơ chế làm mất thông tin</h4>
-<table class="t">
-  <tr><th>Cơ chế</th><th>Triệu chứng</th><th>Khắc phục</th></tr>
-  <tr><td>Tóm tắt lũy tiến</td><td>“khách muốn hoàn tiền” thay vì “2 × 1.250.000đ ngày 03/10”</td><td>Khối case facts giữ nguyên văn</td></tr>
-  <tr><td>Lost in the middle</td><td>Bỏ sót thông tin nằm giữa input dài</td><td>Đặt điều quan trọng ở đầu (hoặc cuối), dùng tiêu đề/thẻ rõ</td></tr>
-  <tr><td>Nhiễu từ output công cụ</td><td>40 trường không liên quan đẩy dữ kiện ra xa</td><td>Cắt gọn trước khi nối vào lịch sử</td></tr>
-</table>
-<h4>🧰 Các công cụ giảm áp lực ngữ cảnh</h4>
-<ul>
-  <li><b>Cắt gọn tại nguồn</b>: công cụ trả trường cần thiết; hoặc lọc trong hook PostToolUse.</li>
-  <li><b>Xóa kết quả công cụ cũ</b> đã dùng xong (giữ lại kết luận rút ra).</li>
-  <li><b>Subagent</b> cho việc đọc nhiều; nhận về kết quả có cấu trúc kèm metadata (ngày, nguồn, phương pháp).</li>
-  <li><b>Nén có định hướng</b>: khi tóm tắt, chỉ rõ cái gì phải giữ nguyên văn.</li>
-</ul>
-<p>Lưu ý: cửa sổ ngữ cảnh lớn hơn <b>không</b> sửa được thông tin đã bị tóm tắt mất, và cũng không loại bỏ hiệu ứng lost-in-the-middle.</p>`,
+<section class="adv-block">
+  <h4>Sắp xếp ngữ cảnh cho một cuộc trò chuyện dài</h4>
+  <p>Mỗi lần gọi Claude, chương trình tự “lắp ráp” nội dung gửi đi. Một thứ tự hợp lý từ trên xuống:</p>
+  <ol class="steps-dg">
+    <li>Hướng dẫn chung và danh sách công cụ. Phần này không đổi, nên đặt đầu để tận dụng lưu đệm.</li>
+    <li class="hot">Khối dữ kiện quan trọng (case facts): số tiền, ngày, mã đơn, ghi nguyên văn và không bao giờ tóm tắt.</li>
+    <li>Bản tóm tắt các lượt trò chuyện cũ.</li>
+    <li>Vài lượt gần nhất, giữ nguyên văn.</li>
+    <li>Kết quả công cụ, đã được cắt gọn chỉ còn các trường cần thiết.</li>
+  </ol>
+</section>
+<section class="adv-block">
+  <h4>Ngữ cảnh lớn hơn không giải quyết được vấn đề</h4>
+  <p>Đổi sang model có ngữ cảnh lớn hơn nghe như một giải pháp đơn giản, nhưng nó không cứu được thông tin đã bị tóm tắt làm mất. Nó cũng không làm hết hiện tượng bỏ sót phần giữa, và chi phí mỗi lượt còn tăng lên. Cách hiệu quả là giữ thông tin quan trọng ở chỗ dễ thấy, và bỏ bớt những gì không cần.</p>
+</section>
+<section class="adv-block">
+  <h4>Những cách giảm tải ngữ cảnh</h4>
+  <p>Cắt gọn kết quả ngay tại công cụ, hoặc trong hook PostToolUse. Xóa bớt kết quả công cụ cũ đã dùng xong, chỉ giữ lại kết luận. Giao những việc phải đọc nhiều cho agent con và chỉ nhận về kết quả gọn. Khi tóm tắt, chỉ rõ những gì phải giữ nguyên văn.</p>
+</section>`,
     traps: [
       {
-        title: "“Cứ tăng context window”",
+        title: "“Cứ tăng kích thước ngữ cảnh lên”",
         level: "hard",
-        scenario: "Agent hỗ trợ nhắc sai số tiền sau 50 lượt. Đề xuất: chuyển sang model có context 1 triệu token.",
-        bait: "Nhiều chỗ hơn thì không phải tóm tắt nữa.",
-        why: "Kiến trúc hiện tại vẫn tóm tắt theo ngưỡng; và ngữ cảnh dài hơn còn làm thông tin quan trọng dễ chìm hơn. Chi phí mỗi lượt cũng tăng.",
-        fix: ["Trích dữ kiện vào case facts ngay khi xuất hiện, đặt đầu ngữ cảnh.", "Cắt gọn output công cụ.", "Giữ tóm tắt cho phần hội thoại ít quan trọng."],
+        scenario: "Agent hỗ trợ nhắc sai số tiền sau 50 lượt trò chuyện. Có người đề xuất chuyển sang model có ngữ cảnh một triệu token.",
+        bait: "Nghĩ rằng có nhiều chỗ hơn thì không phải tóm tắt nữa.",
+        why: "Hệ thống hiện tại vẫn sẽ tóm tắt khi chạm ngưỡng. Ngữ cảnh dài hơn còn khiến thông tin quan trọng dễ chìm hơn, và chi phí mỗi lượt tăng lên.",
+        fix: ["Ghi dữ kiện quan trọng vào khối case facts ngay khi chúng xuất hiện, đặt ở đầu ngữ cảnh.", "Cắt gọn kết quả công cụ.", "Chỉ tóm tắt những phần ít quan trọng của cuộc trò chuyện."],
       },
       {
-        title: "Phát hiện quan trọng ở giữa báo cáo dài",
-        scenario: "Subagent trả báo cáo 6.000 từ; phát hiện “lỗ hổng xác thực nghiêm trọng” nằm ở đoạn thứ 14. Coordinator tổng hợp không nhắc tới.",
-        bait: "Yêu cầu coordinator “đọc kỹ toàn bộ”.",
-        why: "Lost in the middle; định dạng văn xuôi dài không làm nổi bật mức độ quan trọng.",
-        fix: ["Yêu cầu subagent trả cấu trúc: <code>key_findings</code> (xếp theo mức độ) ở đầu, chi tiết sau.", "Coordinator nhận phần tóm tắt có cấu trúc trước."],
+        title: "Phát hiện quan trọng nằm giữa một báo cáo dài",
+        scenario: "Agent con trả về báo cáo dài 6.000 chữ. Phát hiện “lỗ hổng xác thực nghiêm trọng” nằm ở đoạn thứ 14. Báo cáo tổng hợp của coordinator không nhắc gì tới nó.",
+        bait: "Dặn coordinator “đọc kỹ toàn bộ”.",
+        why: "Thông tin ở giữa nội dung dài dễ bị bỏ sót. Văn bản dài cũng không làm nổi bật mức độ quan trọng của từng phát hiện.",
+        fix: ["Yêu cầu agent con trả kết quả có cấu trúc: danh sách phát hiện chính, xếp theo mức độ nghiêm trọng, đặt ở đầu; phần chi tiết để sau.", "Coordinator đọc phần tóm tắt có cấu trúc trước."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Công cụ lookup_order trả 45 trường, agent chỉ cần 5. Sau nhiều lần tra cứu, chất lượng trả lời giảm. Giải pháp phù hợp nhất ở tầng nào?",
-        options: ["Prompt: “bỏ qua các trường không liên quan”", "Lọc kết quả về trường liên quan trước khi nối vào lịch sử (trong công cụ hoặc hook PostToolUse)", "Tóm tắt toàn bộ hội thoại sau mỗi lượt", "Tăng max_tokens"],
+        q: "Công cụ lookup_order trả về 45 trường, trong khi agent chỉ cần 5. Sau nhiều lần tra cứu, chất lượng trả lời giảm. Nên xử lý ở đâu?",
+        options: ["Dặn trong prompt: “bỏ qua các trường không liên quan”", "Lọc kết quả chỉ còn các trường cần thiết trước khi thêm vào cuộc trò chuyện (trong công cụ hoặc trong hook PostToolUse)", "Tóm tắt toàn bộ cuộc trò chuyện sau mỗi lượt", "Tăng max_tokens"],
         answer: 1,
-        explain: "Loại nhiễu trước khi nó vào ngữ cảnh — deterministic và tiết kiệm token mọi lượt sau.",
-        notes: ["Nhiễu vẫn chiếm ngữ cảnh và chú ý.", "Đúng.", "Tóm tắt dày làm mất chi tiết khác.", "max_tokens là đầu ra."],
+        explain: "Loại bỏ phần thừa trước khi nó vào ngữ cảnh. Cách này chắc chắn, và tiết kiệm cho mọi lượt sau.",
+        notes: ["Phần thừa vẫn chiếm chỗ và chiếm sự chú ý.", "Đúng.", "Tóm tắt dày đặc làm mất những chi tiết khác.", "max_tokens là giới hạn độ dài câu trả lời."],
       },
     ],
   },
@@ -60,54 +56,46 @@ window.DEEP_ADD({
   "5-2": {
     widgets: ["handoffTrace", "escalation"],
     advanced: `
-<h4>🚦 Tín hiệu escalate: đáng tin vs không đáng tin</h4>
-<table class="t">
-  <tr><th>✅ Đáng tin</th><th>❌ Không đáng tin</th></tr>
-  <tr><td>Khách yêu cầu rõ gặp người thật</td><td>Điểm sentiment thấp</td></tr>
-  <tr><td>Chính sách không quy định / có ngoại lệ cần thẩm quyền</td><td>Độ tự tin model tự báo</td></tr>
-  <tr><td>Không thể tiến triển (công cụ lỗi liên tục, thiếu quyền)</td><td>Độ dài hội thoại</td></tr>
-  <tr><td>Hành động vượt hạn mức đã định (tiền, rủi ro)</td><td>Khách dùng từ ngữ gay gắt</td></tr>
-</table>
-<h4>🧭 Cây quyết định</h4>
-<div class="dg v dg-anim">
-  <div class="dn"><b>Khách yêu cầu người thật?</b> → Có: chuyển ngay kèm bàn giao</div>
-  <div class="dn"><b>Định danh mơ hồ (nhiều khách khớp)?</b> → Hỏi thêm thông tin định danh</div>
-  <div class="dn"><b>Chính sách có quy định rõ?</b> → Không: escalate (khoảng trống chính sách)</div>
-  <div class="dn"><b>Trong khả năng & thẩm quyền?</b> → Có: tự xử lý, ghi nhận cảm xúc</div>
-  <div class="dn hot"><b>Đã thử mà không tiến triển?</b> → escalate kèm việc đã thử</div>
-</div>
-<h4>🤝 Chất lượng bàn giao</h4>
-<ul>
-  <li>Schema bàn giao bắt buộc: định danh, đã xác minh chưa, tóm tắt, dữ kiện, việc đã làm, đề xuất, link transcript.</li>
-  <li>Báo khách: đã chuyển, mã ticket, thời gian chờ, không cần kể lại.</li>
-  <li>Không “cố thêm một chút” khi khách đã yêu cầu người thật — làm giảm niềm tin.</li>
-</ul>`,
+<section class="adv-block">
+  <h4>Các bước agent nên tự hỏi</h4>
+  <ol class="steps-dg">
+    <li>Khách có yêu cầu nói chuyện với người thật không? Nếu có, chuyển ngay, kèm bản bàn giao.</li>
+    <li>Có nhiều tài khoản khớp với thông tin khách đưa không? Nếu có, hỏi thêm email hoặc mã đơn.</li>
+    <li>Chính sách có quy định cho trường hợp này không? Nếu không, chuyển cho người có thẩm quyền.</li>
+    <li>Việc này có nằm trong khả năng và quyền hạn của agent không? Nếu có, tự xử lý, đồng thời ghi nhận cảm xúc của khách.</li>
+    <li class="hot">Đã thử nhiều cách mà vẫn không tiến triển? Chuyển cho người, kèm danh sách những gì đã thử.</li>
+  </ol>
+</section>
+<section class="adv-block">
+  <h4>Vì sao không dựa vào điểm cảm xúc</h4>
+  <p>Một khách bực bội vì giao hàng trễ hai ngày có điểm cảm xúc rất thấp, nhưng vấn đề lại đơn giản và agent tự xử lý được. Một khách lịch sự xin được giảm giá theo giá đối thủ có điểm cảm xúc cao, nhưng lại là trường hợp chính sách chưa quy định và cần người có thẩm quyền. Cảm xúc chỉ nên dùng để điều chỉnh cách nói chuyện, không dùng để quyết định có chuyển hay không.</p>
+</section>`,
     traps: [
       {
-        title: "Escalate theo sentiment",
+        title: "Chuyển cho người dựa vào điểm cảm xúc",
         level: "hard",
-        scenario: "Hệ thống escalate khi sentiment &lt; 0.3. Hàng đợi nhân viên quá tải bởi khách bực vì giao trễ (việc agent tự xử lý được), trong khi các ca khoảng trống chính sách với khách lịch sự lại không được escalate.",
-        bait: "Điều chỉnh ngưỡng sentiment xuống 0.2.",
-        why: "Cảm xúc không tương quan với độ phức tạp của ca hay nhu cầu thẩm quyền.",
-        fix: ["Bỏ sentiment khỏi điều kiện escalate.", "Dùng tín hiệu rõ: yêu cầu của khách, khoảng trống chính sách, không tiến triển, vượt hạn mức.", "Sentiment chỉ dùng để điều chỉnh giọng điệu."],
+        scenario: "Hệ thống chuyển cho nhân viên khi điểm cảm xúc thấp hơn 0,3. Hàng đợi của nhân viên quá tải bởi những khách bực vì giao trễ, việc mà agent tự xử lý được. Trong khi đó, những trường hợp chính sách chưa quy định với khách lịch sự lại không được chuyển.",
+        bait: "Điều chỉnh ngưỡng xuống 0,2.",
+        why: "Cảm xúc của khách không phản ánh độ khó của vụ việc, cũng không cho biết có cần người có thẩm quyền hay không.",
+        fix: ["Bỏ điểm cảm xúc khỏi điều kiện chuyển cho người.", "Dùng các tín hiệu rõ ràng: khách yêu cầu, chính sách chưa quy định, không thể tiến triển, vượt hạn mức.", "Chỉ dùng điểm cảm xúc để điều chỉnh giọng điệu khi trả lời."],
       },
       {
-        title: "Đoán khách trong nhiều kết quả khớp",
-        scenario: "get_customer(\"Nguyễn Văn A\") trả 3 tài khoản. Agent chọn tài khoản có đơn gần nhất và hủy đơn của người khác.",
-        bait: "Thêm heuristic thông minh hơn (khớp thành phố, khớp số điện thoại một phần).",
-        why: "Mọi heuristic đều có xác suất sai; thao tác trên tài khoản nhầm là lỗi nghiêm trọng.",
-        fix: ["Nhiều kết quả → hỏi thêm định danh duy nhất (email, mã đơn).", "Công cụ thao tác chỉ nhận customer_id đã xác minh."],
+        title: "Đoán khách khi có nhiều tài khoản trùng tên",
+        scenario: "Tra cứu “Nguyễn Văn A” trả về ba tài khoản. Agent chọn tài khoản có đơn gần nhất, rồi hủy nhầm đơn của người khác.",
+        bait: "Thêm cách đoán thông minh hơn, như khớp thành phố hay khớp một phần số điện thoại.",
+        why: "Cách đoán nào cũng có khả năng sai, và thao tác trên tài khoản của người khác là lỗi nghiêm trọng.",
+        fix: ["Khi có nhiều kết quả, hỏi thêm thông tin định danh duy nhất như email hoặc mã đơn.", "Công cụ thao tác trên tài khoản chỉ nhận mã khách hàng đã được xác minh."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Khách lịch sự yêu cầu được bồi thường thêm vì đơn bị giao nhầm màu; chính sách chỉ nói về đổi trả, không nói về bồi thường. Model tự báo độ tự tin 0.95 rằng có thể tặng voucher 200.000đ. Agent nên?",
-        options: ["Tặng voucher vì độ tự tin cao", "Xử lý phần đổi trả theo chính sách; với yêu cầu bồi thường (khoảng trống chính sách) thì escalate kèm tóm tắt", "Từ chối bồi thường vì chính sách không cho phép", "Hỏi khách muốn bao nhiêu"],
+        q: "Một khách lịch sự xin được bồi thường thêm vì đơn bị giao nhầm màu. Chính sách chỉ quy định đổi trả, không nói gì về bồi thường. Model tự báo độ tự tin 0,95 rằng có thể tặng voucher 200.000 đồng. Agent nên làm gì?",
+        options: ["Tặng voucher vì độ tự tin cao", "Xử lý phần đổi trả theo chính sách; với yêu cầu bồi thường (chính sách chưa quy định) thì chuyển cho người có thẩm quyền kèm bản tóm tắt", "Từ chối bồi thường vì chính sách không cho phép", "Hỏi khách muốn được bồi thường bao nhiêu"],
         answer: 1,
-        explain: "Khoảng trống chính sách cần người có thẩm quyền; độ tự tin tự báo không thay được chính sách.",
-        notes: ["Tự sáng tạo chính sách dựa trên tín hiệu không đáng tin.", "Đúng: làm phần rõ ràng, escalate phần mơ hồ.", "Chính sách không cấm — nó không quy định.", "Không giải quyết vấn đề thẩm quyền."],
-        trap: "Con số 0.95 được đưa vào để lôi kéo chọn A.",
+        explain: "Trường hợp chính sách chưa quy định cần người có thẩm quyền quyết định. Độ tự tin model tự báo không thay thế được chính sách.",
+        notes: ["Agent tự đặt ra chính sách dựa trên một tín hiệu không đáng tin.", "Đúng: làm phần đã rõ ràng, chuyển phần chưa rõ.", "Chính sách không cấm, chỉ là chưa quy định.", "Không giải quyết được vấn đề ai có quyền quyết định."],
+        trap: "Con số 0,95 được đưa vào để kéo bạn chọn phương án A.",
       },
     ],
   },
@@ -116,56 +104,50 @@ window.DEEP_ADD({
   "5-3": {
     widgets: ["errorPropTrace", "errorPropagation"],
     advanced: `
-<h4>📦 Phong bì kết quả chuẩn cho subagent</h4>
-<pre><code>{
-  "status": "ok | partial | failed",
+<section class="adv-block">
+  <h4>Một mẫu kết quả chuẩn cho agent con</h4>
+  <pre><code>{
+  "status": "partial",
   "results": [...],
   "errors": [{
-    "source": "journal-db", "type": "transient|permission|...",
-    "attempted": "truy vấn / thao tác đã thử", "retries": 2,
-    "alternatives": ["nguồn thay thế", "thử lại sau"]
+    "source": "journal-db", "type": "transient",
+    "attempted": "truy vấn đã thử", "retries": 2,
+    "alternatives": ["thử lại sau 15 phút", "dùng nguồn scholar-api"]
   }],
   "coverage": {"news": "ok", "journal-db": "missing"}
 }</code></pre>
-<h4>🔀 Ai xử lý lỗi nào?</h4>
-<table class="t">
-  <tr><th>Tầng</th><th>Xử lý</th></tr>
-  <tr><td>Công cụ</td><td>Phân loại lỗi, trả metadata</td></tr>
-  <tr><td>Subagent</td><td>Retry transient có giới hạn; trả partial + lỗi có cấu trúc</td></tr>
-  <tr><td>Coordinator</td><td>Quyết định: nguồn thay thế, ủy thác lại, chấp nhận thiếu</td></tr>
-  <tr><td>Báo cáo cuối</td><td>Ghi chú độ bao phủ cho người đọc</td></tr>
-</table>
-<h4>🧯 Cơ chế bảo vệ</h4>
-<ul>
-  <li>Giới hạn retry + backoff; nguồn lỗi liên tục → tạm ngắt (circuit breaker) thay vì gọi mãi.</li>
-  <li>Không để một lỗi đơn lẻ dừng toàn bộ workflow nếu kết quả một phần vẫn có giá trị.</li>
-  <li>Không đánh dấu “success” khi có phần thiếu.</li>
-</ul>`,
+  <p>Trường <code>status</code> có ba giá trị: <code>ok</code> (đầy đủ), <code>partial</code> (một phần) hoặc <code>failed</code> (thất bại). Chỉ cần nhìn mẫu này, coordinator biết ngay đã có gì, thiếu gì, và có thể thử cách nào khác.</p>
+</section>
+<section class="adv-block">
+  <h4>Mỗi tầng xử lý phần việc của mình</h4>
+  <p><b>Công cụ</b> phân loại lỗi và trả về thông tin rõ ràng. <b>Agent con</b> tự thử lại những lỗi tạm thời (có giới hạn số lần), rồi trả về kết quả một phần cùng mô tả lỗi. <b>Coordinator</b> quyết định thử nguồn khác, giao lại việc, hay chấp nhận thiếu. <b>Báo cáo cuối</b> ghi chú độ bao phủ để người đọc biết kết luận nào có cơ sở chắc chắn tới đâu.</p>
+  <p>Nếu một nguồn liên tục lỗi, nên tạm ngừng gọi nó một thời gian thay vì gọi mãi. Và đừng bao giờ ghi “thành công” khi kết quả thực ra còn thiếu.</p>
+</section>`,
     traps: [
       {
-        title: "Báo cáo “toàn diện” nhưng thiếu",
+        title: "Báo cáo nhận là “toàn diện” nhưng thực ra thiếu",
         level: "hard",
-        scenario: "Subagent bắt mọi exception, trả <code>{status: \"success\", results: [...]}</code> với những gì có được. Báo cáo cuối khẳng định “dựa trên toàn bộ nguồn học thuật” — trong khi nguồn học thuật duy nhất đã timeout.",
-        bait: "Thêm vào prompt synth: “nêu rõ hạn chế của nghiên cứu”.",
-        why: "Synth không biết có hạn chế — thông tin lỗi đã bị nuốt ở subagent.",
-        fix: ["Subagent trả <code>status: partial</code> + errors + coverage.", "Coordinator truyền coverage cho synth.", "Báo cáo có mục ghi chú độ bao phủ."],
+        scenario: "Agent con bắt mọi lỗi và trả về <code>{status: \"success\", results: [...]}</code> với những gì nó lấy được. Báo cáo cuối khẳng định “dựa trên toàn bộ nguồn học thuật”, trong khi nguồn học thuật duy nhất đã bị hết thời gian chờ.",
+        bait: "Dặn agent tổng hợp: “hãy nêu rõ các hạn chế của nghiên cứu”.",
+        why: "Agent tổng hợp không hề biết có hạn chế, vì thông tin lỗi đã bị giấu ngay từ agent con.",
+        fix: ["Agent con trả <code>status: \"partial\"</code>, kèm danh sách lỗi và độ bao phủ.", "Coordinator chuyển thông tin độ bao phủ cho agent tổng hợp.", "Báo cáo có mục ghi chú độ bao phủ."],
       },
       {
-        title: "Retry vô hạn",
-        scenario: "Subagent retry nguồn lỗi không giới hạn “cho tới khi được”. Một job chạy 9 giờ và tốn chi phí lớn.",
-        bait: "Tăng thời gian chờ giữa các lần retry.",
-        why: "Lỗi có thể kéo dài (bảo trì) hoặc không phải transient.",
-        fix: ["Ngân sách retry (ví dụ 2–3 lần, backoff).", "Hết ngân sách → báo lên coordinator với phương án thay thế."],
+        title: "Thử lại không giới hạn",
+        scenario: "Agent con thử lại một nguồn bị lỗi “cho tới khi được”. Có job chạy suốt 9 tiếng và tốn rất nhiều chi phí.",
+        bait: "Tăng thời gian chờ giữa các lần thử.",
+        why: "Lỗi có thể kéo dài, ví dụ nguồn đang bảo trì, hoặc vốn không phải lỗi tạm thời.",
+        fix: ["Đặt giới hạn số lần thử, ví dụ 2 đến 3 lần với thời gian chờ tăng dần.", "Hết lượt thì báo lên coordinator kèm các phương án thay thế."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Subagent kiểm chứng không truy cập được 2/10 nguồn do lỗi quyền (403). Nó nên làm gì?",
-        options: ["Retry 10 lần với backoff", "Trả kết quả kiểm chứng của 8 nguồn, kèm lỗi có cấu trúc loại permission cho 2 nguồn (không retry) để coordinator quyết định", "Đánh dấu 2 nguồn là “không xác minh được” và trả success", "Hủy toàn bộ kiểm chứng"],
+        q: "Agent con kiểm chứng không truy cập được 2 trong 10 nguồn vì bị từ chối quyền truy cập (lỗi 403). Nó nên làm gì?",
+        options: ["Thử lại 10 lần với thời gian chờ tăng dần", "Trả kết quả kiểm chứng của 8 nguồn, kèm mô tả lỗi loại “quyền truy cập” cho 2 nguồn (không thử lại) để coordinator quyết định", "Ghi 2 nguồn là “không kiểm chứng được” và báo thành công", "Hủy toàn bộ việc kiểm chứng"],
         answer: 1,
-        explain: "Lỗi quyền không tự hết khi retry; báo lên với ngữ cảnh để coordinator chọn hướng (nguồn khác, escalate quyền).",
-        notes: ["Retry vô ích với lỗi permission.", "Đúng.", "Che giấu lý do — coordinator không biết đây là vấn đề truy cập.", "Mất 8 kết quả tốt."],
+        explain: "Lỗi quyền truy cập không tự hết khi thử lại. Báo lên kèm đầy đủ thông tin để coordinator chọn hướng: dùng nguồn khác, hoặc xin cấp quyền.",
+        notes: ["Thử lại vô ích với lỗi quyền truy cập.", "Đúng.", "Giấu mất lý do, coordinator không biết đây là vấn đề quyền truy cập.", "Mất luôn 8 kết quả tốt."],
       },
     ],
   },
@@ -173,55 +155,51 @@ window.DEEP_ADD({
   /* ─────────────── 5-4 ─────────────── */
   "5-4": {
     advanced: `
-<h4>🩺 Dấu hiệu suy giảm ngữ cảnh</h4>
-<ul>
-  <li>Trả lời chung chung (“theo pattern phổ biến…”) thay vì tên class/hàm cụ thể.</li>
-  <li>Hỏi lại điều đã được trả lời; đọc lại file đã đọc.</li>
-  <li>Mâu thuẫn với phát hiện trước đó.</li>
-</ul>
-<h4>🧰 Bộ công cụ cho phiên khám phá dài</h4>
-<table class="t">
-  <tr><th>Công cụ</th><th>Cách dùng</th></tr>
-  <tr><td>📝 Scratchpad file</td><td><code>NOTES.md</code>: phát hiện, đường dẫn, dòng, giả thuyết đã loại — đọc lại khi cần</td></tr>
-  <tr><td>🔎 Subagent / Explore</td><td>Câu hỏi điều tra cụ thể; nhận kết quả gọn</td></tr>
-  <tr><td>🗜️ <code>/compact [chỉ dẫn]</code></td><td>Nén hội thoại, có thể chỉ rõ cần giữ gì (“giữ danh sách file và giả thuyết”)</td></tr>
-  <tr><td>🧹 <code>/clear</code></td><td>Bắt đầu sạch khi chuyển sang việc khác hẳn</td></tr>
-  <tr><td>📌 CLAUDE.md</td><td>Kiến thức bền vững về codebase cho mọi phiên sau</td></tr>
-</table>
-<h4>🧭 Nhịp làm việc theo giai đoạn</h4>
-<div class="dg dg-anim">
-  <div class="dn"><b>Khám phá</b>qua subagent</div><span class="da">→</span><div class="dn"><b>Ghi scratchpad</b></div><span class="da">→</span><div class="dn hot"><b>Tóm tắt giai đoạn</b></div><span class="da">→</span><div class="dn"><b>/compact hoặc phiên mới</b></div><span class="da">→</span><div class="dn"><b>Giai đoạn tiếp</b></div>
-</div>
-<h4>💾 Manifest trạng thái cho hệ nhiều giai đoạn</h4>
-<pre><code>{"phase": "analysis", "done": ["map_modules", "find_entrypoints"],
- "pending": ["trace_refund_flow"], "artifacts": ["notes/modules.md"],
+<section class="adv-block">
+  <h4>Nhịp làm việc cho một phiên khám phá dài</h4>
+  <ol class="steps-dg">
+    <li>Giao những câu hỏi khảo sát cụ thể cho agent con, ví dụ “lần theo luồng hoàn tiền, trả về danh sách hàm và file”.</li>
+    <li>Ghi các phát hiện quan trọng vào file ghi chú, kèm đường dẫn và số dòng.</li>
+    <li class="hot">Kết thúc mỗi giai đoạn bằng một đoạn tóm tắt: đã biết gì, đã loại trừ gì, câu hỏi nào còn mở.</li>
+    <li>Nén cuộc trò chuyện bằng <code>/compact</code>, hoặc mở phiên mới và đọc lại file ghi chú.</li>
+    <li>Chuyển sang giai đoạn tiếp theo.</li>
+  </ol>
+  <p>Lệnh <code>/compact</code> có thể kèm chỉ dẫn những gì cần giữ, ví dụ <code>/compact giữ lại danh sách file và các giả thuyết đã loại</code>. Lệnh <code>/clear</code> xóa sạch để bắt đầu một việc hoàn toàn khác. Những hiểu biết bền vững về codebase, cần cho mọi phiên sau, nên ghi vào CLAUDE.md.</p>
+</section>
+<section class="adv-block">
+  <h4>Lưu trạng thái để tiếp tục sau sự cố</h4>
+  <pre><code>{"phase": "analysis",
+ "done": ["map_modules", "find_entrypoints"],
+ "pending": ["trace_refund_flow"],
+ "artifacts": ["notes/modules.md"],
  "updated_at": "2026-10-29T10:12:00Z"}</code></pre>
-<p>Mỗi agent ghi manifest sau mỗi bước → coordinator khôi phục sau sự cố mà không làm lại từ đầu.</p>`,
+  <p>Nếu mỗi agent ghi một file trạng thái như trên sau mỗi bước, khi hệ thống bị gián đoạn, coordinator đọc file này là biết cần tiếp tục từ đâu, không phải làm lại từ đầu.</p>
+</section>`,
     traps: [
       {
         title: "/compact làm mất phát hiện",
         level: "hard",
-        scenario: "Sau 2 giờ khám phá, bạn chạy <code>/compact</code>. Bản nén chỉ còn “đã khảo sát module thanh toán”, mất danh sách 7 hàm và dòng code quan trọng.",
-        bait: "Không dùng /compact nữa, chịu ngữ cảnh đầy.",
-        why: "Nén là tóm tắt — chi tiết không được ghi lại ở đâu khác sẽ mất.",
-        fix: ["Trước khi nén: ghi phát hiện chi tiết vào scratchpad file.", "Dùng <code>/compact</code> kèm chỉ dẫn những gì phải giữ.", "Sau nén: tham chiếu scratchpad khi cần chi tiết."],
+        scenario: "Sau hai giờ khảo sát, bạn chạy <code>/compact</code>. Bản nén chỉ còn một câu “đã khảo sát module thanh toán”, mất hết danh sách 7 hàm và các dòng code quan trọng.",
+        bait: "Không dùng /compact nữa, chấp nhận ngữ cảnh đầy.",
+        why: "Nén là tóm tắt. Chi tiết nào không được ghi ở chỗ khác sẽ mất.",
+        fix: ["Trước khi nén, ghi các phát hiện chi tiết vào file ghi chú.", "Dùng <code>/compact</code> kèm chỉ dẫn những gì cần giữ.", "Sau khi nén, đọc lại file ghi chú khi cần chi tiết."],
       },
       {
-        title: "Đọc cả codebase “cho chắc”",
-        scenario: "Để hiểu luồng hoàn tiền trong repo 2.000 file, bạn yêu cầu Claude đọc mọi file trong <code>src/</code> trước.",
-        bait: "Nhiều thông tin hơn thì hiểu tốt hơn.",
-        why: "Ngữ cảnh đầy nhiễu trước khi bắt đầu câu hỏi thật.",
-        fix: ["Grep điểm vào (refund), lần theo luồng gọi.", "Giao subagent: “lần dấu luồng hoàn tiền, trả danh sách hàm và file”."],
+        title: "Đọc cả codebase cho chắc",
+        scenario: "Để hiểu luồng hoàn tiền trong một repo 2.000 file, bạn yêu cầu Claude đọc hết mọi file trong <code>src/</code> trước.",
+        bait: "Nghĩ rằng có nhiều thông tin hơn thì hiểu tốt hơn.",
+        why: "Ngữ cảnh đã đầy những thứ không liên quan trước khi bạn kịp hỏi câu hỏi thật.",
+        fix: ["Dùng Grep tìm điểm bắt đầu (từ khóa “refund”), rồi lần theo các lời gọi hàm.", "Giao cho agent con: “lần theo luồng hoàn tiền, trả về danh sách hàm và file liên quan”."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Hệ thống phân tích nhiều giai đoạn đôi khi bị dừng giữa chừng (container bị thu hồi) và phải chạy lại từ đầu mất 3 giờ. Cải thiện tốt nhất?",
-        options: ["Tăng tài nguyên container", "Mỗi agent ghi manifest trạng thái (đã xong, đang chờ, artifact) sau mỗi bước để coordinator khôi phục", "Chạy toàn bộ trong một agent", "Giảm số giai đoạn"],
+        q: "Một hệ thống phân tích nhiều giai đoạn đôi khi bị dừng giữa chừng (máy chủ bị thu hồi) và phải chạy lại từ đầu, mất 3 giờ. Cải thiện nào tốt nhất?",
+        options: ["Tăng cấu hình máy chủ", "Mỗi agent ghi file trạng thái (đã xong gì, còn gì, các file kết quả) sau mỗi bước, để coordinator tiếp tục được từ chỗ dừng", "Chạy toàn bộ trong một agent", "Giảm bớt số giai đoạn"],
         answer: 1,
-        explain: "Trạng thái bền vững bên ngoài ngữ cảnh cho phép tiếp tục từ điểm dừng.",
-        notes: ["Giảm tần suất, không giải quyết khôi phục.", "Đúng.", "Một agent càng dễ đầy ngữ cảnh, vẫn mất khi dừng.", "Không giải quyết vấn đề."],
+        explain: "Trạng thái được lưu bên ngoài ngữ cảnh cho phép tiếp tục từ điểm dừng.",
+        notes: ["Giảm khả năng bị dừng, nhưng không giải quyết chuyện tiếp tục khi bị dừng.", "Đúng.", "Một agent lại càng dễ đầy ngữ cảnh, và vẫn mất hết khi bị dừng.", "Không giải quyết được vấn đề."],
       },
     ],
   },
@@ -229,49 +207,49 @@ window.DEEP_ADD({
   /* ─────────────── 5-5 ─────────────── */
   "5-5": {
     advanced: `
-<h4>📊 Đo theo phân nhóm</h4>
-<table class="t">
-  <tr><th>Chiều phân nhóm</th><th>Ví dụ</th></tr>
-  <tr><td>Loại tài liệu</td><td>Hóa đơn chuẩn, viết tay, hợp đồng, biên lai</td></tr>
-  <tr><td>Trường</td><td>Tổng tiền 99%, mã số thuế 88%, ngày 97%</td></tr>
-  <tr><td>Nguồn / định dạng</td><td>PDF gốc vs ảnh chụp</td></tr>
-  <tr><td>Thời gian</td><td>Tháng này vs tháng trước (trôi dạt dữ liệu)</td></tr>
-</table>
-<h4>🎯 Lấy mẫu phân tầng</h4>
-<p>Lấy mẫu ngẫu nhiên đơn giản 200 tài liệu sẽ chỉ có ~3 hóa đơn viết tay (1,5%) — không đủ để đo. Phân tầng: lấy cỡ mẫu đủ cho <b>mỗi</b> nhóm (kể cả nhóm hiếm), và vẫn lấy mẫu cả trích xuất có độ tin cậy cao để phát hiện lỗi “tự tin nhưng sai”.</p>
-<h4>📐 Hiệu chỉnh độ tin cậy</h4>
-<div class="dg dg-anim">
-  <div class="dn"><b>Tập có nhãn</b>kết quả đúng/sai thật</div><span class="da">→</span>
-  <div class="dn"><b>So sánh</b>confidence dự đoán vs tỷ lệ đúng thực tế theo từng khoảng</div><span class="da">→</span>
-  <div class="dn hot"><b>Đặt ngưỡng theo trường</b>tự động / duyệt tay</div><span class="da">→</span>
-  <div class="dn"><b>Theo dõi liên tục</b>trôi dạt → hiệu chỉnh lại</div>
-</div>
-<p>Ví dụ: trong khoảng confidence 0.9–1.0, nếu chỉ 80% thực sự đúng thì con số 0.9 đang “tự tin quá mức” — ngưỡng phải nâng hoặc nhóm đó phải duyệt tay.</p>`,
+<section class="adv-block">
+  <h4>Chia nhóm để đo cho đúng</h4>
+  <p>Đừng chỉ nhìn một con số tổng. Hãy đo độ chính xác theo từng loại tài liệu (hóa đơn in, hóa đơn viết tay, hợp đồng), theo từng trường (tổng tiền, mã số thuế, ngày), theo nguồn (file PDF gốc hay ảnh chụp), và theo thời gian (tháng này so với tháng trước, để phát hiện khi dữ liệu đầu vào thay đổi).</p>
+</section>
+<section class="adv-block">
+  <h4>Vì sao cần lấy mẫu phân tầng</h4>
+  <p>Giả sử hóa đơn viết tay chỉ chiếm 1,5% tổng số. Lấy ngẫu nhiên 200 tài liệu để kiểm tra, bạn chỉ bốc được khoảng 3 hóa đơn viết tay, quá ít để kết luận điều gì. Lấy mẫu phân tầng nghĩa là chia tài liệu theo nhóm rồi lấy đủ số lượng từ mỗi nhóm, kể cả nhóm hiếm. Ngoài ra, vẫn nên lấy mẫu cả những kết quả model báo là rất tự tin, để phát hiện kiểu lỗi “tự tin nhưng sai”.</p>
+</section>
+<section class="adv-block">
+  <h4>Đối chiếu độ tự tin với thực tế</h4>
+  <ol class="steps-dg">
+    <li>Chuẩn bị một tập dữ liệu đã được người kiểm tra, biết rõ kết quả nào đúng, kết quả nào sai.</li>
+    <li>So sánh: trong những kết quả model báo tự tin 90%, thực tế đúng bao nhiêu phần trăm?</li>
+    <li class="hot">Đặt ngưỡng riêng cho từng trường: trên ngưỡng thì tự động chấp nhận, dưới ngưỡng thì chuyển cho người kiểm tra.</li>
+    <li>Theo dõi định kỳ và điều chỉnh lại khi dữ liệu thay đổi.</li>
+  </ol>
+  <p>Ví dụ: nếu trong nhóm model báo tự tin trên 90% mà thực tế chỉ đúng 80%, thì model đang tự tin quá mức. Cần nâng ngưỡng, hoặc tiếp tục để người kiểm tra nhóm đó.</p>
+</section>`,
     traps: [
       {
-        title: "Bỏ người duyệt vì 97%",
+        title: "Bỏ người kiểm tra vì độ chính xác 97%",
         level: "hard",
-        scenario: "Pipeline đạt 97% tổng thể. Quản lý muốn bỏ 100% người duyệt. Hóa đơn viết tay (1,5% khối lượng) có độ chính xác 61% nhưng không ai biết.",
-        bait: "97% vượt mục tiêu 95% → bỏ duyệt.",
-        why: "Con số tổng bị chi phối bởi nhóm lớn; nhóm nhỏ kém bị che.",
-        fix: ["Báo cáo độ chính xác theo loại tài liệu và trường.", "Giảm duyệt dần cho nhóm đã chứng minh tốt; giữ duyệt cho nhóm kém.", "Duy trì lấy mẫu phân tầng định kỳ."],
+        scenario: "Pipeline đạt 97% độ chính xác tổng. Quản lý muốn bỏ hoàn toàn người kiểm tra. Hóa đơn viết tay, chỉ chiếm 1,5% khối lượng, thực tế chỉ đúng 61%, nhưng không ai biết.",
+        bait: "97% vượt mục tiêu 95%, nên bỏ người kiểm tra.",
+        why: "Con số tổng chủ yếu phản ánh nhóm lớn. Nhóm nhỏ làm kém bị che mất.",
+        fix: ["Báo cáo độ chính xác theo từng loại tài liệu và từng trường.", "Giảm dần người kiểm tra cho những nhóm đã chứng minh làm tốt; giữ người kiểm tra cho nhóm còn yếu.", "Duy trì lấy mẫu phân tầng định kỳ."],
       },
       {
-        title: "Tin confidence thô",
-        scenario: "Định tuyến: confidence ≥ 0.9 thì tự động. Kiểm tra mẫu thấy nhóm này vẫn sai 12% ở trường mã số thuế.",
-        bait: "Nâng ngưỡng lên 0.99 cho mọi trường.",
-        why: "Confidence chưa hiệu chỉnh và mỗi trường có đặc tính khác nhau.",
-        fix: ["Hiệu chỉnh theo từng trường trên tập có nhãn.", "Ngưỡng riêng theo trường; trường rủi ro cao có thể luôn duyệt."],
+        title: "Tin ngay con số tự tin của model",
+        scenario: "Quy tắc: độ tự tin từ 0,9 trở lên thì tự động chấp nhận. Kiểm tra mẫu cho thấy nhóm này vẫn sai 12% ở trường mã số thuế.",
+        bait: "Nâng ngưỡng lên 0,99 cho mọi trường.",
+        why: "Con số tự tin chưa được đối chiếu với thực tế, và mỗi trường có đặc điểm khác nhau.",
+        fix: ["Đối chiếu độ tự tin với thực tế cho từng trường, dựa trên một tập dữ liệu đã kiểm tra.", "Đặt ngưỡng riêng cho từng trường. Trường có rủi ro cao có thể luôn cần người kiểm tra."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Bạn có ngân sách duyệt tay 300 tài liệu/tuần để giám sát chất lượng; 2% khối lượng là hợp đồng nước ngoài (độ chính xác chưa rõ). Cách lấy mẫu tốt nhất?",
-        options: ["Ngẫu nhiên đơn giản 300 tài liệu", "Phân tầng theo loại tài liệu, đảm bảo đủ mẫu cho hợp đồng nước ngoài, và lấy cả mẫu từ trích xuất có độ tin cậy cao", "Chỉ duyệt các trích xuất có độ tin cậy thấp", "Duyệt 300 tài liệu mới nhất"],
+        q: "Bạn có thể cho người kiểm tra 300 tài liệu mỗi tuần để theo dõi chất lượng. 2% khối lượng là hợp đồng nước ngoài, chưa rõ độ chính xác. Nên lấy mẫu thế nào?",
+        options: ["Lấy ngẫu nhiên 300 tài liệu", "Lấy mẫu phân tầng theo loại tài liệu, đảm bảo đủ số hợp đồng nước ngoài, và lấy cả mẫu từ những kết quả có độ tự tin cao", "Chỉ kiểm tra những kết quả có độ tự tin thấp", "Kiểm tra 300 tài liệu mới nhất"],
         answer: 1,
-        explain: "Phân tầng đảm bảo nhóm hiếm có đủ mẫu; lấy mẫu cả nhóm tin cậy cao để phát hiện lỗi tự tin.",
-        notes: ["Chỉ ~6 hợp đồng nước ngoài — quá ít để kết luận.", "Đúng.", "Bỏ sót lỗi “tự tin nhưng sai”.", "Thiên lệch theo thời gian, không đại diện."],
+        explain: "Lấy mẫu phân tầng đảm bảo nhóm hiếm có đủ mẫu. Lấy mẫu cả nhóm tự tin cao giúp phát hiện lỗi “tự tin nhưng sai”.",
+        notes: ["Chỉ được khoảng 6 hợp đồng nước ngoài, quá ít để kết luận.", "Đúng.", "Bỏ sót kiểu lỗi tự tin nhưng sai.", "Lệch theo thời gian, không đại diện cho toàn bộ."],
       },
     ],
   },
@@ -279,53 +257,49 @@ window.DEEP_ADD({
   /* ─────────────── 5-6 ─────────────── */
   "5-6": {
     advanced: `
-<h4>🔗 Giữ liên kết claim–nguồn xuyên suốt pipeline</h4>
-<div class="dg dg-anim">
-  <div class="dn"><span class="i">🔎</span><b>Search</b>trả {claim, quote, url, date}</div><span class="da">→</span>
-  <div class="dn"><span class="i">🧪</span><b>Analyze</b>giữ source_id cho mọi nhận định</div><span class="da">→</span>
-  <div class="dn"><span class="i">📝</span><b>Synth</b>chỉ trích theo source_id có sẵn</div><span class="da">→</span>
-  <div class="dn good"><span class="i">✅</span><b>Kiểm tra</b>mọi trích dẫn thuộc tập nguồn</div>
-</div>
-<h4>🧾 Schema claim</h4>
-<pre><code>{"claim": "Tỷ lệ DN áp dụng AI", "value": "34%",
- "source_id": "S3", "quote": "…34% of surveyed SMEs…",
- "published": "2024-06", "method": "khảo sát 1.000 DN nhỏ",
- "status": "established | contested"}</code></pre>
-<h4>⚔️ Xử lý số liệu mâu thuẫn</h4>
-<table class="t">
-  <tr><th>Tình huống</th><th>Cách trình bày</th></tr>
-  <tr><td>Khác thời điểm</td><td>Nêu cả hai kèm ngày — có thể là xu hướng, không phải mâu thuẫn</td></tr>
-  <tr><td>Khác phương pháp/phạm vi</td><td>Nêu cả hai, giải thích khác biệt mẫu</td></tr>
-  <tr><td>Mâu thuẫn thật</td><td>Đánh dấu “còn tranh cãi”, không tự chọn hay lấy trung bình</td></tr>
-</table>
-<h4>🖼️ Định dạng theo nội dung</h4>
-<p>Số liệu so sánh → bảng có cột nguồn/ngày; diễn giải nguyên nhân → văn xuôi có trích dẫn; phát hiện đã xác lập và còn tranh cãi → tách mục riêng.</p>`,
+<section class="adv-block">
+  <h4>Giữ nguồn qua từng bước</h4>
+  <ol class="steps-dg">
+    <li>Agent tìm kiếm trả về từng nhận định kèm đoạn trích, đường dẫn và ngày.</li>
+    <li>Agent phân tích gắn mã nguồn (ví dụ S3) cho mọi nhận định nó đưa ra.</li>
+    <li>Agent tổng hợp chỉ được trích dẫn những mã nguồn có trong dữ liệu được giao.</li>
+    <li class="good">Một bước kiểm tra tự động xác nhận mọi trích dẫn trong báo cáo đều thuộc danh sách nguồn đầu vào.</li>
+  </ol>
+  <pre><code>{"claim": "Tỷ lệ doanh nghiệp áp dụng AI", "value": "34%",
+ "source_id": "S3", "quote": "...34% of surveyed SMEs...",
+ "published": "2024-06", "method": "khảo sát 1.000 doanh nghiệp nhỏ",
+ "status": "established"}</code></pre>
+</section>
+<section class="adv-block">
+  <h4>Hai con số khác nhau chưa chắc đã mâu thuẫn</h4>
+  <p>Nếu hai nguồn đo ở <b>hai thời điểm</b> khác nhau, sự khác biệt có thể là một xu hướng tăng giảm. Nếu hai nguồn khảo sát <b>hai nhóm</b> khác nhau, ví dụ doanh nghiệp nhỏ và doanh nghiệp lớn, chúng đang đo hai thứ khác nhau. Chỉ khi cùng thời điểm, cùng phạm vi mà vẫn khác nhau thì mới là mâu thuẫn thật; khi đó đánh dấu “còn tranh cãi” và trình bày cả hai. Trong mọi trường hợp, đừng tự chọn một con số và đừng lấy trung bình.</p>
+</section>`,
     traps: [
       {
         title: "Lấy trung bình hai nguồn",
         level: "hard",
-        scenario: "Nguồn A (2024, DN nhỏ): 34%. Nguồn B (2025, DN lớn): 52%. Synth viết “khoảng 43% doanh nghiệp đã áp dụng AI”.",
-        bait: "Trung bình nghe khách quan.",
-        why: "Con số 43% không do nguồn nào đưa ra, gộp hai tổng thể khác nhau và che khác biệt thời gian.",
-        fix: ["Trình bày cả hai giá trị với nguồn, ngày, phạm vi khảo sát.", "Giải thích khác biệt (quy mô DN, thời điểm).", "Không tạo số liệu mới không có nguồn."],
+        scenario: "Nguồn A (2024, khảo sát doanh nghiệp nhỏ) cho kết quả 34%. Nguồn B (2025, khảo sát doanh nghiệp lớn) cho 52%. Agent tổng hợp viết: “khoảng 43% doanh nghiệp đã áp dụng AI”.",
+        bait: "Lấy trung bình nghe có vẻ khách quan.",
+        why: "Con số 43% không do nguồn nào đưa ra. Nó trộn hai nhóm doanh nghiệp khác nhau, và che mất sự khác biệt về thời điểm.",
+        fix: ["Trình bày cả hai con số, kèm nguồn, ngày và phạm vi khảo sát.", "Giải thích lý do chúng khác nhau (quy mô doanh nghiệp, thời điểm).", "Không tạo ra con số mới không có nguồn."],
       },
       {
-        title: "Trích dẫn rơi mất ở bước tóm tắt",
-        scenario: "Subagent search có url đầy đủ, nhưng báo cáo cuối chỉ có “theo các nghiên cứu gần đây”.",
-        bait: "Yêu cầu synth “thêm nguồn vào cuối báo cáo”.",
-        why: "Synth chỉ nhận văn xuôi đã tóm tắt từ coordinator, không còn mapping claim–nguồn.",
-        fix: ["Truyền dữ liệu có cấu trúc (claim + source_id + url + date) xuyên suốt.", "Synth bắt buộc gắn source_id cho mọi nhận định."],
+        title: "Trích dẫn bị rơi mất ở bước tóm tắt",
+        scenario: "Agent tìm kiếm có đầy đủ đường dẫn nguồn, nhưng báo cáo cuối chỉ ghi “theo các nghiên cứu gần đây”.",
+        bait: "Dặn agent tổng hợp “thêm danh sách nguồn ở cuối báo cáo”.",
+        why: "Agent tổng hợp chỉ nhận được đoạn văn đã tóm tắt từ coordinator, không còn thông tin nhận định nào đi với nguồn nào.",
+        fix: ["Truyền dữ liệu có cấu trúc (nhận định, mã nguồn, đường dẫn, ngày) qua mọi bước.", "Bắt buộc agent tổng hợp gắn mã nguồn cho từng nhận định."],
       },
     ],
     quiz: [
       {
         level: "hard",
-        q: "Hai nguồn uy tín cho tốc độ tăng trưởng thị trường 2025 là 12% và 19%; nguồn 12% công bố tháng 1, nguồn 19% công bố tháng 11 với dữ liệu cả năm. Synth nên trình bày thế nào?",
-        options: ["Chọn 19% vì mới hơn", "Nêu cả hai, ghi ngày công bố và phạm vi dữ liệu (dự báo đầu năm vs số liệu cả năm), giải thích khác biệt", "Lấy trung bình 15,5%", "Bỏ số liệu vì mâu thuẫn"],
+        q: "Hai nguồn uy tín đưa ra tốc độ tăng trưởng thị trường năm 2025 là 12% và 19%. Nguồn 12% công bố hồi tháng 1 (dự báo), nguồn 19% công bố tháng 11 với số liệu cả năm. Nên trình bày thế nào?",
+        options: ["Chọn 19% vì mới hơn", "Nêu cả hai, ghi ngày công bố và loại số liệu (dự báo đầu năm và số liệu cả năm), giải thích vì sao khác nhau", "Lấy trung bình 15,5%", "Bỏ số liệu này vì mâu thuẫn"],
         answer: 1,
-        explain: "Metadata thời gian giải thích khác biệt; người đọc tự đánh giá được.",
-        notes: ["Mất thông tin, không minh bạch lý do chọn.", "Đúng.", "Tạo số liệu không nguồn nào nêu.", "Mất thông tin hữu ích."],
-        trap: "“Mới hơn thì đúng hơn” nghe hợp lý nhưng đề kiểm tra tính minh bạch nguồn gốc.",
+        explain: "Thông tin về thời điểm giải thích được sự khác biệt, và người đọc tự đánh giá được.",
+        notes: ["Mất thông tin, và không minh bạch về lý do chọn.", "Đúng.", "Tạo ra con số không nguồn nào đưa ra.", "Mất thông tin hữu ích."],
+        trap: "“Mới hơn thì đúng hơn” nghe hợp lý, nhưng đề đang kiểm tra việc giữ minh bạch về nguồn.",
       },
     ],
   },
