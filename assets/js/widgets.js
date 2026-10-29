@@ -1,4 +1,5 @@
-/* Mô phỏng tương tác cho từng mục. Mỗi widget: { title, render(el) } */
+/* Mô phỏng tương tác cho từng mục. Mỗi widget: { title, render(el) }.
+   Các mô phỏng luồng dữ liệu chi tiết nằm ở assets/js/sim/*.js. */
 (function () {
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const json = (o) => `<pre><code>${esc(JSON.stringify(o, null, 2))}</code></pre>`;
@@ -105,23 +106,6 @@
   };
 
   /* ── Chương 1 ── */
-  W.agentLoop = {
-    title: "Mô phỏng vòng lặp agent hoàn tiền",
-    render: stepper(
-      [
-        { role: "user", who: "Người dùng", text: "Tôi muốn hoàn tiền đơn hàng #1234.", on: [0] },
-        { role: "assistant", who: "Claude", html: 'tool_use → <code>get_customer({"order_id":"1234"})</code><br><b>stop_reason: "tool_use"</b> → tiếp tục vòng lặp', on: [1, 2] },
-        { role: "tool", who: "Code của bạn", html: 'Chạy công cụ, nối <code>tool_result</code>: <code>{"customer_id":"C-88","verified":true}</code>', on: [3] },
-        { role: "assistant", who: "Claude", html: 'tool_use → <code>lookup_order({"order_id":"1234"})</code><br><b>stop_reason: "tool_use"</b>', on: [1, 2] },
-        { role: "tool", who: "Code của bạn", html: 'tool_result: <code>{"amount":89,"status":"delivered","days_since":12}</code>', on: [3] },
-        { role: "assistant", who: "Claude", html: 'tool_use → <code>process_refund({"order_id":"1234","amount":89})</code><br><b>stop_reason: "tool_use"</b>', on: [1, 2] },
-        { role: "tool", who: "Code của bạn", html: 'tool_result: <code>{"refund_id":"R-551","status":"ok"}</code>', on: [3] },
-        { role: "assistant", who: "Claude", html: 'Text: “Đã hoàn $89 cho đơn #1234, mã R-551.”<br><b>stop_reason: "end_turn"</b> → <b>kết thúc vòng lặp</b> ✅', on: [4], state: "pass" },
-      ],
-      ["Gửi messages", "Claude", "Kiểm tra stop_reason", "Chạy công cụ + nối tool_result", "Kết thúc"]
-    ),
-  };
-
   W.hubSpoke = {
     title: "Sơ đồ coordinator – subagent (bấm vào subagent)",
     render(el) {
@@ -196,39 +180,6 @@ tool_use Task(agent="search", prompt="...điện ảnh...")
     },
   };
 
-  W.hookPipeline = {
-    title: "Thử nghiệm hook PreToolUse & PostToolUse",
-    render(el) {
-      el.innerHTML = `<div class="grid grid-2">
-          <label class="small">Số tiền hoàn: <b id="av">$300</b><input type="range" id="amt" min="50" max="1000" step="50" value="300"></label>
-          <label class="small">Công cụ trả ngày dạng:<br><select id="fmt"><option value="unix">Unix timestamp</option><option value="vn">dd/mm/yyyy</option><option value="iso">ISO 8601</option></select></label></div>
-        <label class="toggle"><input type="checkbox" id="pre" checked> Bật PreToolUse (chặn > $500)</label>
-        <label class="toggle"><input type="checkbox" id="post" checked> Bật PostToolUse (chuẩn hóa ngày)</label>
-        <div class="btn-row"><button class="btn primary" id="run">▶ Chạy process_refund</button></div>
-        <div class="flow" id="flow"></div><div class="stepper-log" id="log"></div>`;
-      const $ = (s) => el.querySelector(s);
-      $("#amt").oninput = (e) => ($("#av").textContent = "$" + e.target.value);
-      const raw = { unix: "1767225600", vn: "01/01/2026", iso: "2026-01-01T00:00:00Z" };
-      $("#run").onclick = () => {
-        const amt = +$("#amt").value, pre = $("#pre").checked, post = $("#post").checked, fmt = $("#fmt").value;
-        const nodes = ["Claude gọi tool", "PreToolUse", "process_refund", "PostToolUse", "Claude nhận kết quả"];
-        const blocked = pre && amt > 500;
-        const st = nodes.map((_, k) => (blocked ? (k === 1 ? "blocked" : k === 0 ? "on" : "") : k === 1 && !pre ? "" : k === 3 && !post ? "" : "pass"));
-        $("#flow").innerHTML = nodes.map((x, k) => `${k ? '<span class="arrow">→</span>' : ""}<span class="node ${st[k]}">${x}</span>`).join("");
-        const logs = [`<div class="msg assistant"><span class="who">Claude</span>tool_use process_refund({"amount": ${amt}})</div>`];
-        if (blocked) logs.push(`<div class="msg err"><span class="who">PreToolUse</span>Chặn: vượt hạn mức $500 → chuyển sang escalate_to_human với tóm tắt ca.</div>`);
-        else {
-          if (!pre && amt > 500) logs.push(`<div class="msg err"><span class="who">Cảnh báo</span>Không có hook — hoàn $${amt} đã được thực hiện, vi phạm chính sách!</div>`);
-          logs.push(`<div class="msg tool"><span class="who">Tool</span>{"refund_id":"R-9","processed_at":"${raw[fmt]}"}</div>`);
-          if (post && fmt !== "iso") logs.push(`<div class="msg system"><span class="who">PostToolUse</span>Chuẩn hóa processed_at: "${raw[fmt]}" → "${raw.iso}"</div>`);
-          else if (!post && fmt !== "iso") logs.push(`<div class="msg err"><span class="who">Rủi ro</span>Model nhận định dạng “${raw[fmt]}” không đồng nhất với các công cụ khác → dễ so sánh ngày sai.</div>`);
-        }
-        $("#log").innerHTML = logs.join("");
-      };
-      $("#run").click();
-    },
-  };
-
   W.decomposition = {
     title: "Phân loại: chuỗi cố định hay phân rã động?",
     render: sorter("Chọn chiến lược phân rã phù hợp.", ["Prompt chaining (cố định)", "Phân rã động (adaptive)"], [
@@ -250,48 +201,6 @@ tool_use Task(agent="search", prompt="...điện ảnh...")
         { name: "lookup_order", description: "Tra một đơn hàng bằng order_id (dạng #1234): trạng thái, vận chuyển, số tiền. Dùng cho câu hỏi 'đơn ở đâu', 'đã giao chưa'. Ví dụ: lookup_order({order_id:'1234'})." },
       ]) + `<div class="msg tool"><span class="who">Truy vấn: “Đơn của tôi đang ở đâu?”</span>Claude gọi lookup_order ✓</div>` },
     ]),
-  };
-
-  W.errorBuilder = {
-    title: "Tạo phản hồi lỗi MCP có cấu trúc",
-    render(el) {
-      const cats = {
-        transient: { msg: "Dịch vụ kho tạm thời quá tải (timeout 30s).", retry: true, act: "Thử lại với backoff; nếu vẫn lỗi, báo coordinator kèm kết quả một phần." },
-        validation: { msg: "order_id phải có dạng #NNNN, nhận được 'abc'.", retry: true, act: "Sửa đầu vào (hỏi lại khách mã đơn đúng) rồi gọi lại." },
-        business: { msg: "Đơn đã quá 90 ngày, không đủ điều kiện hoàn tiền.", retry: false, act: "Không thử lại. Giải thích chính sách cho khách, đề xuất phương án khác." },
-        permission: { msg: "Tài khoản agent không có quyền hoàn tiền doanh nghiệp.", retry: false, act: "Escalate cho nhân viên có thẩm quyền kèm tóm tắt ca." },
-        empty: null,
-      };
-      el.innerHTML = `<div class="btn-row">${Object.keys(cats).map((k) => `<button class="btn" data-k="${k}">${k === "empty" ? "Không có kết quả (hợp lệ)" : k}</button>`).join("")}</div><div id="o" style="margin-top:12px"></div>`;
-      const show = (k) => {
-        el.querySelectorAll("[data-k]").forEach((b) => b.classList.toggle("primary", b.dataset.k === k));
-        const c = cats[k];
-        el.querySelector("#o").innerHTML = c
-          ? json({ isError: true, content: [{ type: "text", text: JSON.stringify({ errorCategory: k, isRetryable: c.retry, message: c.msg }) }] }) + `<div class="msg assistant"><span class="who">Agent nên</span>${esc(c.act)}</div>`
-          : json({ isError: false, content: [{ type: "text", text: JSON.stringify({ orders: [], note: "Truy vấn thành công, không có đơn khớp" }) }] }) + `<div class="msg tool"><span class="who">Agent nên</span>Báo cho khách là không tìm thấy đơn — đây KHÔNG phải lỗi, không cần thử lại.</div>`;
-      };
-      el.querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => show(b.dataset.k)));
-      show("transient");
-    },
-  };
-
-  W.toolChoice = {
-    title: "Thử các chế độ tool_choice",
-    render(el) {
-      const modes = {
-        auto: { cfg: { type: "auto" }, out: "Claude có thể trả lời bằng text: “Hóa đơn này có tổng $1.240…” — không đảm bảo có JSON.", cls: "assistant" },
-        any: { cfg: { type: "any" }, out: "Claude BẮT BUỘC gọi một công cụ, tự chọn extract_invoice (phù hợp loại tài liệu) → luôn có JSON có cấu trúc.", cls: "tool" },
-        forced: { cfg: { type: "tool", name: "extract_metadata" }, out: "Claude BẮT BUỘC gọi đúng extract_metadata trước tiên — dùng để ép thứ tự bước trong pipeline.", cls: "tool" },
-      };
-      el.innerHTML = `<p class="small muted" style="margin-top:0">Công cụ có sẵn: extract_invoice, extract_receipt, extract_metadata. Input: ảnh một hóa đơn.</p>
-        <div class="compare-tabs">${Object.keys(modes).map((k) => `<button data-k="${k}">${k}</button>`).join("")}</div><div id="o"></div>`;
-      const show = (k) => {
-        el.querySelectorAll("[data-k]").forEach((b) => b.classList.toggle("on", b.dataset.k === k));
-        el.querySelector("#o").innerHTML = json({ tool_choice: modes[k].cfg }) + `<div class="msg ${modes[k].cls}"><span class="who">Kết quả</span>${esc(modes[k].out)}</div>`;
-      };
-      el.querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => show(b.dataset.k)));
-      show("auto");
-    },
   };
 
   W.mcpConfig = {
@@ -410,27 +319,6 @@ tool_use Task(agent="search", prompt="...điện ảnh...")
     ]),
   };
 
-  W.ciPipeline = {
-    title: "Cấu hình Claude Code trong CI",
-    render(el) {
-      el.innerHTML = `<label class="toggle"><input type="checkbox" id="p"> Dùng cờ <code>-p</code></label>
-        <label class="toggle"><input type="checkbox" id="j"> <code>--output-format json --json-schema</code></label>
-        <label class="toggle"><input type="checkbox" id="h"> Đưa phát hiện của lần review trước vào ngữ cảnh</label>
-        <div id="o"></div>`;
-      const run = () => {
-        const p = el.querySelector("#p").checked, j = el.querySelector("#j").checked, h = el.querySelector("#h").checked;
-        const cmd = `claude ${p ? "-p " : ""}"Review PR này theo CLAUDE.md"${j ? " --output-format json --json-schema review.schema.json" : ""}`;
-        let res;
-        if (!p) res = `<div class="msg err"><span class="who">CI</span>⏳ Job treo… Claude Code đang chờ input tương tác. Timeout sau 60 phút.</div>`;
-        else if (!j) res = `<div class="msg system"><span class="who">CI</span>Nhận được văn bản tự do — khó đăng thành comment inline theo dòng.</div>`;
-        else res = `<div class="msg tool"><span class="who">CI</span>JSON hợp lệ → đăng ${h ? "2 comment inline <b>mới</b>" : "7 comment inline (5 trùng với lần trước ✗)"}.</div>`;
-        el.querySelector("#o").innerHTML = `<pre><code>${esc(cmd)}</code></pre>${res}`;
-      };
-      el.querySelectorAll("input").forEach((i) => (i.onchange = run));
-      run();
-    },
-  };
-
   /* ── Chương 4 ── */
   W.criteriaRewrite = {
     title: "Viết lại chỉ dẫn mơ hồ thành tiêu chí",
@@ -480,15 +368,6 @@ Ví dụ 3: "Muốn đổi gói cước" → billing</code></pre><div class="msg
       el.querySelectorAll("input").forEach((i) => (i.onchange = run));
       run();
     },
-  };
-
-  W.retryLoop = {
-    title: "Khi nào retry có ích?",
-    render: compare([
-      { label: "Lỗi định dạng", verdict: "good", note: "Retry kèm lỗi cụ thể → sửa được", html: `<div class="msg err"><span class="who">Lần 1</span>{"invoice_date": "03/15/2026"} → lỗi: cần ISO 8601</div><div class="msg system"><span class="who">Retry</span>Gửi lại tài liệu + output cũ + lỗi: "invoice_date phải dạng YYYY-MM-DD"</div><div class="msg tool"><span class="who">Lần 2</span>{"invoice_date": "2026-03-15"} ✓</div>` },
-      { label: "Tổng không khớp", verdict: "good", note: "calculated_total vs stated_total phát hiện sai", html: `<div class="msg err"><span class="who">Lần 1</span>{"stated_total": 1240, "calculated_total": 1140} → chênh 100</div><div class="msg system"><span class="who">Retry</span>"Tổng các dòng = 1140 nhưng tổng ghi = 1240. Kiểm tra lại các dòng hàng."</div><div class="msg tool"><span class="who">Lần 2</span>Bổ sung dòng bị sót "Phí vận chuyển 100" ✓</div>` },
-      { label: "Thông tin không tồn tại", verdict: "bad", note: "Retry vô ích → nullable + chuyển người duyệt", html: `<div class="msg err"><span class="who">Lần 1–5</span>po_number thiếu… thiếu… thiếu…</div><div class="msg system"><span class="who">Phân tích</span>Hóa đơn gốc không hề ghi số PO. Retry không thể tạo ra dữ liệu không có.</div><div class="msg tool"><span class="who">Đúng</span>po_number: null + gắn cờ cho người duyệt.</div>` },
-    ]),
   };
 
   W.batchDecider = {
@@ -629,4 +508,5 @@ Ví dụ 3: "Muốn đổi gói cước" → billing</code></pre><div class="msg
   };
 
   window.WIDGETS = W;
+  window.WKIT = { sorter, compare, stepper, json, esc };
 })();
