@@ -21,7 +21,7 @@ Web ôn thi chứng chỉ **Claude Certified Architect – Foundations (CCA-F)**
 - **Mục lục dính** ở đầu mỗi bài, tự sáng phần đang đọc; mục tự được đánh dấu hoàn thành khi làm hết câu hỏi.
 - **Bảng thuật ngữ** gần 70 từ; trong bài học, từ có gạch chân chấm hiện giải thích khi rê chuột hoặc chạm vào.
 - **Tình huống khó & bẫy** ở mọi mục: kịch bản thực tế, cách làm dễ sai, vì sao sai, cách xử lý đúng (lời giải ẩn cho tới khi bấm xem).
-- **Mô phỏng luồng dữ liệu (trace)**: các bên có icon, gói tin chạy giữa các bên; mỗi bước có thẻ giải thích bằng lời và các tab chi tiết (dữ liệu được gửi, ý nghĩa các trường, bên nhận xử lý ra sao, đoạn code tương ứng, lịch sử). Mô phỏng dài có chế độ **Tóm tắt** (chỉ các bước chính) và **Đầy đủ**.
+- **Mô phỏng luồng dữ liệu (trace)**: 20 quy trình chia theo giai đoạn. Mỗi bước ghi rõ **bên gửi → bên nhận** và **kênh truyền** (HTTPS tới Claude API, stdio JSON-RPC của MCP, gọi hàm trong cùng chương trình, đọc file…). Dữ liệu ở mỗi bước có nhãn **Đầy đủ** hoặc **Rút gọn**; request/response của Claude API hiện trọn body JSON và cả gói HTTP, chỗ nào rút gọn thì ghi rõ phần bị lược. Cuối mỗi mô phỏng có danh sách toàn bộ các bước; mô phỏng dài có chế độ **Tóm tắt** (chỉ các bước chính) và **Đầy đủ**.
 - **Ngân hàng 148 câu hỏi thi thử**, giải thích từng phương án; thứ tự câu và phương án được trộn mỗi lần làm, độ dài phương án được cân để không đoán được đáp án. Mọi câu có **bản tiếng Anh** (nút chuyển ngôn ngữ) để quen với đề thật.
 - **Thi thử** giống đề thật (60 câu, 120 phút, theo trọng số), đề nhanh 20 câu, luyện theo chương, và **Ôn câu sai** (gom từ bài học lẫn thi thử). Kết quả có phân tích theo lĩnh vực và gợi ý mục nên đọc lại.
 - **Flashcard** khoảng 150 thẻ theo từng mục, có đánh dấu đã nhớ và chế độ chỉ ôn thẻ chưa nhớ.
@@ -56,4 +56,4 @@ assets/js/app.js        # router, quiz, flashcard, thi thử, thuật ngữ, th�
 examples/               # code mẫu cho phần thực hành (xem examples/README.md)
 ```
 
-Muốn thêm mục mới, thêm một object vào `sections` trong `content.js`; phần nâng cao, tình huống khó, câu hỏi khó thêm qua `DEEP_ADD({...})` trong `deep/`; mô phỏng mới viết bằng `SIM.trace({...})` trong `sim/` (đánh dấu `key: true` cho các bước chính để có chế độ tóm tắt). Câu hỏi mới nên có trường `en` (bản tiếng Anh), và các phương án nên dài tương đương nhau.
+Muốn thêm mục mới, thêm một object vào `sections` trong `content.js`; phần nâng cao, tình huống khó, câu hỏi khó thêm qua `DEEP_ADD({...})` trong `deep/`; mô phỏng mới viết bằng `SIM.trace({...})` trong `sim/`: khai báo `actors` (kèm `desc`), `links` (kênh truyền mặc định cho từng cặp bên), và cho mỗi bước `phase`, `from`/`to`, dữ liệu qua `views` hoặc `payload` (ghi `part` nếu rút gọn); dùng `SIM.claude(...)` để dựng request/response Claude API đầy đủ, và `key: true` cho các bước chính ở chế độ tóm tắt. Câu hỏi mới nên có trường `en` (bản tiếng Anh), và các phương án nên dài tương đương nhau.
