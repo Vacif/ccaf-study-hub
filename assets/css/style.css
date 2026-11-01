@@ -251,7 +251,7 @@ svg text { fill: var(--text); font-family: inherit; }
 .tr-actor { position: relative; text-align: center; padding: 12px 6px 10px; border: 1.5px solid var(--border); border-radius: 14px; background: var(--surface); transition: border-color .3s, background .3s, transform .3s; }
 .tr-actor .ic { width: 48px; height: 48px; margin: 0 auto 8px; border-radius: 50%; display: grid; place-items: center; font-size: 25px; background: var(--surface-2); }
 .tr-actor b { display: block; font-size: 13px; line-height: 1.3; }
-.tr-actor small { display: block; color: var(--muted); font-size: 11.5px; line-height: 1.35; margin-top: 3px; }
+.tr-actor small { display: block; color: var(--muted); font-size: 11.5px; line-height: 1.35; margin-top: 3px; overflow-wrap: anywhere; }
 .tr-actor.src { border-color: var(--accent); }
 .tr-actor.dst { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-2px); }
 .tr-actor.dst .ic { animation: tr-ring 1.2s ease .7s; }
@@ -276,11 +276,68 @@ svg text { fill: var(--text); font-family: inherit; }
 .callout.warn { background: var(--warn-soft); }
 .callout b { margin-right: 2px; }
 
+/* Các bên tham gia, giai đoạn, tuyến gửi/nhận */
+.tr-cast { border: 1px solid var(--border); border-radius: 12px; padding: 0 16px; }
+.tr-cast summary, .tr-flow summary { cursor: pointer; padding: 11px 0; font-weight: 700; font-size: 14px; }
+.tr-cast ul { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 12px; }
+.tr-cast li { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; line-height: 1.6; }
+.tr-cast .ic { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 19px; background: var(--surface-2); }
+.tr-cast small { color: var(--muted); }
+.tr-cast p { margin: 2px 0 0; }
+.tr-phases { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.tr-phases:empty { display: none; }
+.tr-phases li { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 99px; border: 1px solid transparent; background: var(--surface-2); color: var(--muted); font-size: 12.5px; font-weight: 600; cursor: pointer; line-height: 1.35; }
+.tr-phases li span { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); font-size: 11px; }
+.tr-phases li.done { color: var(--text); }
+.tr-phases li.done span { background: var(--ok-soft); color: var(--ok); }
+.tr-phases li.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.tr-phases li.on span { background: var(--accent); color: #fff; }
+.tr-phn { font-weight: 600; }
+.tr-route { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.tr-end { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 40%; padding: 7px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); }
+.tr-end .ic { font-size: 20px; }
+.tr-end b { display: block; font-size: 13.5px; line-height: 1.3; }
+.tr-end small { display: block; font-size: 11.5px; line-height: 1.3; color: var(--muted); overflow-wrap: anywhere; }
+.tr-via { position: relative; flex: 1; min-width: 80px; display: flex; align-items: center; justify-content: center; padding: 4px 12px 4px 0; }
+.tr-via::before { content: ""; position: absolute; left: 0; right: 6px; top: 50%; border-top: 2px solid var(--accent); }
+.tr-via::after { content: ""; position: absolute; right: 0; top: 50%; transform: translateY(-50%); border-style: solid; border-width: 6px 0 6px 9px; border-color: transparent transparent transparent var(--accent); }
+.tr-via span { position: relative; padding: 2px 8px; border-radius: 6px; background: var(--surface-2); font-size: 12.5px; font-weight: 600; line-height: 1.45; text-align: center; overflow-wrap: break-word; min-width: 0; }
+.tr-route.self .tr-via { justify-content: flex-start; padding: 0; }
+.tr-route.self .tr-via::before, .tr-route.self .tr-via::after { display: none; }
+.tr-route.self .tr-via span { padding: 0; background: none; color: var(--muted); font-weight: 500; font-style: italic; text-align: left; }
+/* Dữ liệu: đầy đủ hay rút gọn */
+.tr-phead { position: sticky; top: -16px; z-index: 2; margin: -16px -18px 10px; padding: 14px 18px 2px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.tr-pmeta { margin: 0 0 10px; font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.tr-pmeta span { font-weight: 600; color: var(--text); }
+.tr-views { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 3px; margin: 0 0 10px; border-radius: 10px; background: var(--surface-2); }
+.tr-views button { border: 0; background: none; padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.tr-views button.on { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+.tr-views small { font-weight: 500; color: var(--warn); }
+.tr-badge { margin: 0 0 10px; padding: 8px 12px; border-radius: 8px; font-size: 13.5px; line-height: 1.6; }
+.tr-badge.full { background: var(--ok-soft); }
+.tr-badge.part { background: var(--warn-soft); }
+.tr-pane pre.code .ln { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Danh sách toàn bộ quy trình */
+.tr-flow { border: 1px solid var(--border); border-radius: 14px; padding: 0 16px; }
+.tr-flow summary small { font-weight: 500; color: var(--muted); }
+.tr-flow-b { padding-bottom: 12px; }
+.tr-flow-ph { margin: 12px 0 6px; font-size: 12px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; color: var(--accent); }
+.tr-flow ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.tr-flow li[data-k] { display: flex; align-items: flex-start; gap: 10px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+.tr-flow li[data-k]:hover { background: var(--surface-2); }
+.tr-flow li.on { background: var(--accent-soft); }
+.tr-flow .n { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); font-size: 12px; font-weight: 700; }
+.tr-flow li.on .n { background: var(--accent); color: #fff; }
+.tr-flow .b { min-width: 0; }
+.tr-flow .t { display: block; font-size: 14px; line-height: 1.45; }
+.tr-flow .b small { display: block; font-size: 12px; line-height: 1.45; color: var(--muted); overflow-wrap: anywhere; }
+.tr-flow .tr-gap { padding: 2px 8px 2px 42px; font-size: 12.5px; font-style: italic; color: var(--muted); }
+
 .tr-details { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
 .tr-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 8px 0; background: var(--surface-2); border-bottom: 1px solid var(--border); }
 .tr-tabs button { border: 0; background: none; padding: 8px 14px; font-size: 13.5px; font-weight: 600; color: var(--muted); border-radius: 8px 8px 0 0; }
 .tr-tabs button.on { background: var(--surface); color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
-.tr-pane { padding: 16px 18px; max-height: 420px; overflow: auto; }
+.tr-pane { position: relative; padding: 16px 18px; max-height: 460px; overflow: auto; }
 .tr-pane pre { margin: 0 0 10px; }
 .tr-hint { margin: 0 0 10px; font-size: 13.5px; color: var(--muted); }
 .tr-ptitle { font-size: 12.5px; font-weight: 700; color: var(--muted); margin: 8px 0 6px; }
@@ -369,6 +426,13 @@ pre.code .lnum { display: inline-block; width: 26px; color: var(--muted); font-s
   .tr-actor b { font-size: 11px; }
   .tr-actors { gap: 6px; }
   .tr-packet { font-size: 11px; padding: 2px 8px; }
+  .tr-phead { position: static; }
+  .tr-route { flex-direction: column; align-items: stretch; gap: 0; }
+  .tr-end { max-width: none; }
+  .tr-via { justify-content: flex-start; min-height: 40px; padding: 6px 0 12px 26px; }
+  .tr-via::before { left: 15px; right: auto; top: 0; bottom: 8px; border-top: 0; border-left: 2px solid var(--accent); }
+  .tr-via::after { left: 10px; right: auto; top: auto; bottom: 0; transform: none; border-width: 9px 6px 0 6px; border-color: var(--accent) transparent transparent transparent; }
+  .tr-route.self .tr-via { padding: 8px 0 0; min-height: 0; }
   .tr-step { padding: 16px; }
   .tr-speed { margin-left: 0; }
   .tr-tabs { flex-wrap: nowrap; overflow-x: auto; }
