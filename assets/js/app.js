@@ -432,7 +432,11 @@
       const y = 140;
       let cur = heads[0];
       heads.forEach((h) => { if (h.getBoundingClientRect().top < y) cur = h; });
-      app.querySelectorAll("[data-go]").forEach((b) => b.classList.toggle("on", cur && "sec-" + b.dataset.go === cur.id));
+      app.querySelectorAll("[data-go]").forEach((b) => {
+        const on = !!cur && "sec-" + b.dataset.go === cur.id;
+        if (on && !b.classList.contains("on")) { const nav = b.parentElement; nav.scrollLeft = b.offsetLeft - (nav.clientWidth - b.offsetWidth) / 2; }
+        b.classList.toggle("on", on);
+      });
     };
     spy = () => requestAnimationFrame(mark);
     window.addEventListener("scroll", spy, { passive: true });

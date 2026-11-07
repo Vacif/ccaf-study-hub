@@ -121,7 +121,7 @@
         el.innerHTML = `<label class="toggle"><input type="checkbox" id="pass" ${pass ? "checked" : ""}> Coordinator truyền ngữ cảnh tường minh vào prompt subagent</label>
         <svg viewBox="0 0 600 300" style="width:100%;max-height:300px">
           ${subs.map((x, k) => `<line x1="300" y1="150" x2="${x.x + 40}" y2="${x.y + 20}" stroke="${k === sel ? "var(--accent)" : "var(--border)"}" stroke-width="${k === sel ? 3 : 2}" ${k === sel ? 'stroke-dasharray="6 4"' : ""}>${k === sel ? '<animate attributeName="stroke-dashoffset" from="20" to="0" dur=".8s" repeatCount="indefinite"/>' : ""}</line>`).join("")}
-          <rect x="220" y="120" width="160" height="60" rx="12" fill="var(--accent)"/><text x="300" y="146" text-anchor="middle" style="fill:#fff;font-weight:700;font-size:15px">Coordinator</text><text x="300" y="165" text-anchor="middle" style="fill:#fff;font-size:11px">phân rã · ủy thác · tổng hợp</text>
+          <rect x="220" y="120" width="160" height="60" rx="12" fill="var(--accent)"/><text x="300" y="146" text-anchor="middle" style="fill:var(--on-fill);font-weight:700;font-size:15px">Coordinator</text><text x="300" y="165" text-anchor="middle" style="fill:#fff;font-size:11px">phân rã · ủy thác · tổng hợp</text>
           ${subs.map((x, k) => `<g data-k="${k}" style="cursor:pointer"><rect x="${x.x - 50}" y="${x.y}" width="180" height="44" rx="10" fill="${k === sel ? "var(--accent-soft)" : "var(--surface-2)"}" stroke="${k === sel ? "var(--accent)" : "var(--border)"}" stroke-width="2"/><text x="${x.x + 40}" y="${x.y + 27}" text-anchor="middle" style="font-size:13px;font-weight:600">${x.name}</text></g>`).join("")}
         </svg>
         <div class="msg ${pass ? "tool" : "err"}"><span class="who">Ngữ cảnh mà “${s.name}” nhìn thấy</span>
@@ -136,9 +136,9 @@
   W.contextPassing = {
     title: "So sánh prompt gửi cho subagent",
     render: compare([
-      { label: "Prompt thiếu", verdict: "bad", note: "Subagent không biết nguồn nào, tiêu chí gì", html: `<pre><code>Task(agent="analyzer",
+      { label: "Prompt thiếu", verdict: "bad", note: "Subagent không biết nguồn nào, tiêu chí gì", html: `<pre><code>Agent(subagent_type="analyzer",
   prompt="Phân tích các nguồn đã tìm được.")</code></pre>` },
-      { label: "Prompt tự đầy đủ", verdict: "good", note: "Có dữ liệu, metadata nguồn, mục tiêu, tiêu chí", html: `<pre><code>Task(agent="analyzer", prompt="""
+      { label: "Prompt tự đầy đủ", verdict: "good", note: "Có dữ liệu, metadata nguồn, mục tiêu, tiêu chí", html: `<pre><code>Agent(subagent_type="analyzer", prompt="""
 Mục tiêu: đánh giá tác động của AI tới ngành âm nhạc.
 Nguồn (giữ nguyên metadata khi trích dẫn):
 - {url: "...report-2025", title: "...", date: "2025-03"}
@@ -146,10 +146,10 @@ Nguồn (giữ nguyên metadata khi trích dẫn):
 - {url: "...survey", title: "...", date: "2024-11"}
 Tiêu chí: mỗi phát hiện kèm nguồn; nêu rõ chỗ mâu thuẫn.
 """)</code></pre>` },
-      { label: "Song song", verdict: "good", note: "Nhiều Task call trong một response = chạy song song", html: `<pre><code>// Một response của coordinator:
-tool_use Task(agent="search", prompt="...âm nhạc...")
-tool_use Task(agent="search", prompt="...văn học...")
-tool_use Task(agent="search", prompt="...điện ảnh...")
+      { label: "Song song", verdict: "good", note: "Nhiều lệnh Agent trong một response = chạy song song", html: `<pre><code>// Một response của coordinator:
+tool_use Agent(subagent_type="search", prompt="...âm nhạc...")
+tool_use Agent(subagent_type="search", prompt="...văn học...")
+tool_use Agent(subagent_type="search", prompt="...điện ảnh...")
 // → 3 subagent chạy đồng thời, không cần 3 lượt</code></pre>` },
     ]),
   };
@@ -211,12 +211,12 @@ tool_use Task(agent="search", prompt="...điện ảnh...")
     "github": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": { "GITHUB_TOKEN": "\${GITHUB_TOKEN}" }
+      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "\${GITHUB_TOKEN}" }
     }
   }
 }</code></pre><p class="small muted">Token đọc từ biến môi trường của từng developer — không nằm trong repo.</p>` },
       { label: "~/.claude.json (user)", verdict: "good", note: "Cá nhân / thử nghiệm", html: `<p class="small"><b>Vị trí:</b> thư mục home · <b>Chia sẻ:</b> không</p><p>Phù hợp để thử một MCP server mới trước khi đề xuất cho team, hoặc công cụ chỉ bạn dùng.</p>` },
-      { label: "Hardcode token", verdict: "bad", note: "Lộ secret trong lịch sử git", html: `<pre><code>"env": { "GITHUB_TOKEN": "ghp_xxxxxxxxxxxx" }</code></pre>` },
+      { label: "Hardcode token", verdict: "bad", note: "Lộ secret trong lịch sử git", html: `<pre><code>"env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_xxxxxxxxxxxx" }</code></pre>` },
     ]),
   };
 
@@ -351,8 +351,8 @@ Ví dụ 3: "Muốn đổi gói cước" → billing</code></pre><div class="msg
     title: "Schema ảnh hưởng thế nào tới trích xuất?",
     render(el) {
       el.innerHTML = `<div class="msg user"><span class="who">Tài liệu</span>HỢP ĐỒNG DỊCH VỤ — Bên A: Công ty X. Giá trị: 120.000.000đ. Hiệu lực từ 01/03/2026. <i>(Không có điều khoản gia hạn. Loại dịch vụ: tư vấn pháp lý)</i></div>
-        <label class="toggle"><input type="checkbox" id="n"> renewal_date cho phép <code>null</code></label>
-        <label class="toggle"><input type="checkbox" id="o"> enum service_type có <code>"other"</code> + <code>service_detail</code></label>
+        <label class="toggle"><input type="checkbox" id="n"> <span>renewal_date cho phép <code>null</code></span></label>
+        <label class="toggle"><input type="checkbox" id="o"> <span>enum service_type có <code>"other"</code> + <code>service_detail</code></span></label>
         <div class="grid grid-2"><div id="s"></div><div id="r"></div></div>`;
       const run = () => {
         const n = el.querySelector("#n").checked, o = el.querySelector("#o").checked;
@@ -417,11 +417,12 @@ Ví dụ 3: "Muốn đổi gói cước" → billing</code></pre><div class="msg
         <div id="o" style="margin-top:12px"></div>`;
       const run = () => {
         const t = el.querySelector("#t").checked, f = el.querySelector("#f").checked, pos = +el.querySelector("#pos").value;
-        const seg = [["System", 6, "#64748b"], ...(f ? [["Case facts", 4, "#d0702f"]] : []), ["Lịch sử hội thoại", 30, "#3b73d9"], ["Output công cụ", t ? 12 : 52, "#13958a"]];
+        const seg = [["System", 6, "var(--c-slate)"], ...(f ? [["Case facts", 4, "var(--c-orange)"]] : []), ["Lịch sử hội thoại", 30, "var(--c-blue)"], ["Output công cụ", t ? 12 : 52, "var(--c-teal)"]];
         const total = seg.reduce((a, s) => a + s[1], 0);
         const att = 1 - 0.65 * Math.sin(Math.PI * pos);
         const pts = Array.from({ length: 41 }, (_, k) => { const x = k / 40; return `${20 + x * 520},${20 + (0.65 * Math.sin(Math.PI * x)) * 90}`; }).join(" ");
-        el.querySelector("#o").innerHTML = `<div class="ctx-bar">${seg.map((s) => `<div style="flex:${s[1]};background:${s[2]}">${s[0]}</div>`).join("")}<div style="flex:${Math.max(0, 110 - total)};background:var(--surface-2);color:var(--muted)">trống</div></div>
+        el.querySelector("#o").innerHTML = `<div class="ctx-bar">${seg.map((s) => `<div style="flex:${s[1]};background:${s[2]}" title="${s[0]}"></div>`).join("")}<div style="flex:${Math.max(0, 110 - total)};background:var(--surface-2)" title="Còn trống"></div></div>
+          <div class="legend">${seg.map((s) => `<span><i style="background:${s[2]}"></i>${s[0]}</span>`).join("")}<span><i style="background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border)"></i>Còn trống</span></div>
           <div class="small muted" style="margin-top:4px">Đã dùng ~${Math.round((total / 110) * 100)}% ngữ cảnh</div>
           <svg viewBox="0 0 560 140" style="width:100%;margin-top:10px"><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="3"/>
             <circle cx="${20 + pos * 520}" cy="${20 + 0.65 * Math.sin(Math.PI * pos) * 90}" r="8" fill="${att > 0.7 ? "var(--ok)" : "var(--bad)"}"/>
