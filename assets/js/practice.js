@@ -274,7 +274,7 @@ window.PRACTICE = {
       },
       {
         title: "Skill cho việc hiếm khi làm",
-        html: "<p>Viết release notes chỉ cần vài lần mỗi tháng, nên đóng gói thành skill thay vì nhồi vào CLAUDE.md. <code>description</code> nói rõ khi nào dùng; <code>context: fork</code> để kết quả dài không làm đầy phiên chính; <code>allowed-tools</code> giới hạn công cụ.</p>",
+        html: "<p>Viết release notes chỉ cần vài lần mỗi tháng, nên đóng gói thành skill thay vì nhồi vào CLAUDE.md. <code>description</code> nói rõ khi nào dùng; <code>context: fork</code> để kết quả dài không làm đầy phiên chính; <code>allowed-tools</code> cho phép sẵn đúng những lệnh skill cần, để không phải hỏi lại.</p>",
         file: "examples/ch3/.claude/skills/release-notes/SKILL.md",
       },
       {

@@ -82,7 +82,7 @@ window.BANK = {
       options: ["Subagent dùng model nhỏ hơn coordinator nên hiểu kém hơn", "Subagent không thấy “ở trên”; các nguồn phải nằm ngay trong phần giao việc", "Subagent chưa được cấp công cụ Read nên không mở được các nguồn mà coordinator đã đọc", "Coordinator gọi subagent song song nên dữ liệu bị lẫn"],
       en: { q: "The coordinator tells a subagent: “Analyze the sources above.” The subagent returns generic output that mentions no sources. Why?", options: ["The subagent uses a smaller model than the coordinator", "The subagent cannot see “above”; the sources must be in the task prompt itself", "The subagent lacks the Read tool, so it cannot open the sources the coordinator read", "The coordinator ran subagents in parallel, so data got mixed up"] },
       answer: 1,
-      explain: "Subagent bắt đầu với ngữ cảnh trống, chỉ có phần giao việc. “Ở trên” là lịch sử của coordinator, subagent không thấy.",
+      explain: "Subagent bắt đầu một ngữ cảnh mới: có hướng dẫn riêng, công cụ riêng, và từ coordinator chỉ nhận đúng phần giao việc. “Ở trên” là lịch sử của coordinator, subagent không thấy.",
       notes: ["Model không phải vấn đề; thiếu dữ liệu mới là vấn đề.", "Đúng.", "Kể cả có Read, nó cũng không biết đọc nguồn nào.", "Chạy song song không làm lẫn ngữ cảnh."],
     },
     {
@@ -361,7 +361,7 @@ window.BANK = {
       options: ["Trường allowed-tools trong frontmatter của SKILL.md", "Một mục “công cụ của skill” trong CLAUDE.md", "Trong .mcp.json, dưới tên của skill", "Không giới hạn được; skill luôn dùng được mọi công cụ"],
       en: { q: "You want a skill to be limited to certain tools when it runs. Where do you declare that?", options: ["The allowed-tools field in the SKILL.md frontmatter", "A “skill tools” section in CLAUDE.md", "In .mcp.json under the skill's name", "You cannot; a skill can always use every tool"] },
       answer: 0,
-      explain: "Frontmatter của SKILL.md có trường allowed-tools để giới hạn công cụ mà skill được dùng.",
+      explain: "Theo đề thi, trường allowed-tools trong frontmatter của SKILL.md dùng để giới hạn công cụ. Khi làm thật, trường này chỉ cho phép sẵn, không chặn công cụ khác; muốn chặn thật, chạy skill bằng context: fork với một agent ít công cụ.",
       notes: ["Đúng.", "CLAUDE.md không cấu hình công cụ cho skill.", ".mcp.json dùng cho máy chủ MCP.", "Giới hạn được."],
     },
   ],

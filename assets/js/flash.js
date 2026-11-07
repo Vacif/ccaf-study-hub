@@ -31,7 +31,7 @@ window.FLASH = {
   ],
   "1-3": [
     { front: "Subagent bắt đầu với ngữ cảnh gì?", back: "Ngữ cảnh trống, chỉ có phần giao việc (prompt) từ coordinator." },
-    { front: "Muốn subagent chạy song song thì làm gì?", back: "Coordinator phát nhiều lệnh gọi Task trong cùng một lượt trả lời." },
+    { front: "Muốn subagent chạy song song thì làm gì?", back: "Coordinator phát nhiều lệnh gọi Agent (tên cũ: Task) trong cùng một lượt trả lời." },
     { front: "Phiếu giao việc tốt gồm những gì?", back: "Mục tiêu, dữ liệu kèm nguồn, phạm vi, định dạng kết quả mong muốn." },
     { front: "Giới hạn subagent chỉ được đọc thế nào cho chắc?", back: "Chỉ cấp công cụ đọc (Read, Grep, Glob) trong danh sách công cụ của nó." },
   ],
@@ -75,7 +75,7 @@ window.FLASH = {
     { front: ".mcp.json và ~/.claude.json khác nhau thế nào?", back: ".mcp.json trong repo dùng chung cho nhóm; ~/.claude.json (user/local) dùng riêng." },
     { front: "Đưa token vào .mcp.json thế nào cho an toàn?", back: "Viết ${TEN_BIEN}; mỗi người đặt biến môi trường trên máy mình." },
     { front: "Tools và resources của MCP khác nhau thế nào?", back: "Tools để làm việc (tìm, tạo, sửa); resources là danh mục nội dung để đọc." },
-    { front: "Thành viên mới bị lỗi thiếu biến môi trường khi khởi động máy chủ MCP?", back: "Đặt biến đó trên máy của họ rồi khởi động lại; không sửa repo." },
+    { front: "Thành viên mới chưa đặt biến môi trường cho máy chủ MCP thì chuyện gì xảy ra?", back: "Cấu hình vẫn nạp, /mcp hiện cảnh báo thiếu biến, chuỗi ${TÊN} được giữ nguyên nên máy chủ gọi dịch vụ sẽ lỗi. Cách sửa: đặt biến trên máy của họ rồi khởi động lại; không sửa repo." },
   ],
   "2-5": [
     { front: "Grep và Glob khác nhau thế nào?", back: "Grep tìm theo nội dung trong file; Glob tìm theo tên hoặc đường dẫn file." },
@@ -93,7 +93,7 @@ window.FLASH = {
     { front: "Slash command dùng chung cho nhóm đặt ở đâu?", back: ".claude/commands/ trong repo." },
     { front: "Skill khác CLAUDE.md thế nào?", back: "Skill chỉ nạp khi cần; CLAUDE.md luôn được nạp." },
     { front: "Vì sao Claude không bao giờ dùng một skill?", back: "Thường do description mơ hồ: Claude dựa vào description để biết khi nào dùng." },
-    { front: "Giới hạn công cụ cho một skill ở đâu?", back: "Trường allowed-tools trong frontmatter của SKILL.md." },
+    { front: "Giới hạn công cụ cho một skill ở đâu?", back: "Đề thi: trường allowed-tools trong frontmatter của SKILL.md. Thực tế trường này chỉ cho phép sẵn; muốn chặn thật, dùng context: fork với agent ít công cụ, ví dụ agent: Explore." },
   ],
   "3-3": [
     { front: "Rule có paths được nạp khi nào?", back: "Khi Claude làm việc với file khớp mẫu đường dẫn." },

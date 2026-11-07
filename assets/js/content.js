@@ -27,7 +27,7 @@ window.COURSE = {
           body: `
 <p class="lead"><b>Nói ngắn gọn:</b> trước khi học về agent, bạn cần nắm sáu khái niệm: model, API, token, cuộc hội thoại, công cụ, và ba cách dùng Claude. Bài này giải thích từng khái niệm bằng ví dụ đời thường. Nếu bạn đã từng gọi API của một mô hình ngôn ngữ, có thể đọc lướt.</p>
 <h4>1. Claude và “model”</h4>
-<p>Claude là một mô hình ngôn ngữ lớn (LLM): bạn đưa vào một đoạn chữ, nó viết ra một đoạn chữ. Anthropic cung cấp nhiều phiên bản gọi là <b>model</b>, mỗi model có một mã riêng. Dòng Opus mạnh nhất, Sonnet cân bằng giữa chất lượng và tốc độ, Haiku nhanh và rẻ nhất. Khi gọi Claude, bạn phải chọn model, ví dụ <code>claude-opus-5-5</code>.</p>
+<p>Claude là một mô hình ngôn ngữ lớn (LLM): bạn đưa vào một đoạn chữ, nó viết ra một đoạn chữ. Anthropic cung cấp nhiều phiên bản gọi là <b>model</b>, mỗi model có một mã riêng. Dòng Fable mạnh nhất, tiếp theo là Opus; Sonnet cân bằng giữa chất lượng và tốc độ; Haiku nhanh và rẻ nhất. Khi gọi Claude, bạn phải chọn model, ví dụ <code>claude-opus-5-5</code>.</p>
 <h4>2. Gọi Claude qua API</h4>
 <p>API giống một quầy giao dịch. Chương trình của bạn gửi một <b>request</b> (yêu cầu) tới địa chỉ của Anthropic, và nhận về một <b>response</b> (phản hồi). Cả hai viết dưới dạng JSON. Một request tối thiểu trông như sau:</p>
 <pre><code>{
@@ -139,7 +139,7 @@ window.COURSE = {
           goals: ["Nhận ra sáu kịch bản thực tế mà các câu hỏi thường dựa vào", "Đọc một câu hỏi theo thứ tự: hệ thống gì, ràng buộc gì, rồi mới tới đáp án", "Lập được lịch ôn theo trọng số của từng chương"],
           widget: "studyPlan",
           body: `
-<p class="lead"><b>Nói ngắn gọn:</b> mọi câu hỏi đều xoay quanh sáu loại hệ thống quen thuộc. Nhận ra câu hỏi đang nói về loại nào giúp bạn đoán được đề muốn kiểm tra kiến thức gì.</p>
+<p class="lead"><b>Nói ngắn gọn:</b> mọi câu hỏi đều xoay quanh sáu loại hệ thống quen thuộc. Theo hướng dẫn thi, mỗi lần thi lấy ngẫu nhiên 4 trong 6 kịch bản, nên cần ôn đủ cả sáu. Nhận ra câu hỏi đang nói về loại nào giúp bạn đoán được đề muốn kiểm tra kiến thức gì.</p>
 <h4>Sáu kịch bản hay gặp</h4>
 <ul>
   <li><b>Agent chăm sóc khách hàng:</b> xử lý hoàn tiền, xác minh danh tính, biết khi nào cần chuyển cho nhân viên thật.</li>
@@ -293,12 +293,14 @@ window.COURSE = {
         {
           id: "1-3",
           title: "Gọi subagent & truyền ngữ cảnh",
-          goals: ["Gọi subagent bằng công cụ Task và biết cần khai báo gì trong allowedTools", "Viết phiếu giao việc đủ thông tin, kèm nguồn gốc dữ liệu", "Cho nhiều subagent chạy song song trong cùng một lượt"],
+          goals: ["Gọi subagent bằng công cụ Agent (tên cũ: Task) và biết cần khai báo gì trong allowedTools", "Viết phiếu giao việc đủ thông tin, kèm nguồn gốc dữ liệu", "Cho nhiều subagent chạy song song trong cùng một lượt"],
           widget: "contextPassing",
           body: `
 <p class="lead"><b>Hình dung:</b> giao việc cho một cộng tác viên làm từ xa, người chưa từng dự cuộc họp nào của nhóm. Phiếu giao việc phải tự đủ: mục tiêu là gì, dữ liệu đầu vào đâu, làm xong thì nộp theo mẫu nào. Thiếu một trong các thứ đó là họ phải đoán.</p>
-<h4>Gọi subagent bằng công cụ Task</h4>
-<p>Trong Claude Agent SDK, coordinator gọi subagent bằng một công cụ tên là <b>Task</b>. Đây cũng là một công cụ bình thường, nên coordinator phải được phép dùng nó: danh sách <code>allowedTools</code> (các công cụ được phép) của coordinator phải có <code>"Task"</code>. Nếu thiếu, coordinator không có cách nào giao việc.</p>
+<h4>Gọi subagent bằng công cụ Agent (tên cũ: Task)</h4>
+<p>Trong Claude Agent SDK, coordinator gọi subagent bằng một công cụ tên là <b>Agent</b>. Trước Claude Code v2.1.63 công cụ này tên là <b>Task</b>; đề thi và nhiều tài liệu cũ vẫn dùng tên Task, nên cần nhớ cả hai.</p>
+<p>Theo đề thi, danh sách <code>allowedTools</code> của coordinator phải có <code>"Task"</code>; thiếu thì coordinator không giao được việc. Khi làm thật với bản hiện tại, cần biết thêm: <code>allowedTools</code> chỉ là danh sách công cụ được tự duyệt, và công cụ Agent vốn không cần xin phép. Muốn cấm giao việc, hãy bỏ nó khỏi tùy chọn <code>tools</code> hoặc thêm vào <code>disallowedTools</code>.</p>
+<p>Agent con mặc định chạy nền: kết quả công cụ chỉ báo đã khởi chạy, báo cáo về ở lượt sau. Khi bước tiếp theo cần báo cáo đó, Claude sẽ chờ và nhận kết quả ngay trong <code>tool_result</code>.</p>
 <p>Mỗi loại subagent được khai báo bằng một <code>AgentDefinition</code> gồm: mô tả ngắn (để coordinator biết khi nào nên gọi), hướng dẫn riêng cho subagent đó, và danh sách công cụ nó được dùng.</p>
 <h4>Viết phiếu giao việc cho tốt</h4>
 <ul>
@@ -307,11 +309,11 @@ window.COURSE = {
   <li>Giữ thông tin nguồn đi kèm dữ liệu (đường dẫn, tên tài liệu, ngày) theo định dạng rõ ràng, để bước sau còn trích dẫn được.</li>
 </ul>
 <h4>Chạy song song</h4>
-<p>Khi các phần việc độc lập với nhau, coordinator có thể giao tất cả trong <b>cùng một lượt trả lời</b>, bằng cách đưa ra nhiều lệnh Task một lúc. Các subagent sẽ chạy cùng lúc. Nếu giao từng việc qua từng lượt, tổng thời gian sẽ bằng thời gian các việc cộng lại.</p>
+<p>Khi các phần việc độc lập với nhau, coordinator có thể giao tất cả trong <b>cùng một lượt trả lời</b>, bằng cách đưa ra nhiều lệnh Agent một lúc. Các subagent sẽ chạy cùng lúc. Nếu giao từng việc qua từng lượt, tổng thời gian sẽ bằng thời gian các việc cộng lại.</p>
 <p>Với chính coordinator, nên mô tả mục tiêu và tiêu chí thay vì viết kịch bản từng bước cứng nhắc. Như vậy hệ thống còn tự điều chỉnh được khi phát hiện điều mới.</p>`,
           keyPoints: [
-            "allowedTools của coordinator phải có \"Task\" thì mới giao việc được.",
-            "Nhiều lệnh Task trong cùng một lượt trả lời sẽ chạy song song.",
+            "Theo đề thi, allowedTools của coordinator phải có \"Task\" (nay là \"Agent\") thì mới giao việc được.",
+            "Nhiều lệnh Agent trong cùng một lượt trả lời sẽ chạy song song.",
             "Truyền dữ liệu kèm thông tin nguồn, theo định dạng rõ ràng.",
           ],
           tip: "Câu hỏi về giảm thời gian chờ của hệ thống nhiều agent: tìm đáp án “gọi nhiều subagent song song trong cùng một lượt”.",
@@ -320,20 +322,20 @@ window.COURSE = {
               q: "Coordinator gọi lần lượt 4 subagent tìm kiếm độc lập, mỗi lượt một subagent, khiến độ trễ cao. Cải thiện tốt nhất?",
               options: [
                 "Gộp 4 subagent thành một subagent lớn tìm lần lượt cả 4 nguồn trong một lượt",
-                "Phát 4 lệnh gọi Task trong cùng một response để chạy song song",
+                "Phát 4 lệnh gọi Agent (tên cũ: Task) trong cùng một response để chạy song song",
                 "Chuyển 4 lượt tìm kiếm sang Message Batches API",
                 "Giảm còn 1 nguồn tìm kiếm có chất lượng tốt nhất",
               ],
-              en: { q: "A coordinator calls 4 independent search subagents one at a time, one per turn, causing high latency. What is the best improvement?", options: ["Merge the 4 subagents into one large subagent that searches all 4 sources in one turn", "Emit 4 Task calls in a single response so they run in parallel", "Move the 4 searches to the Message Batches API", "Cut down to the single highest-quality search source"] },
+              en: { q: "A coordinator calls 4 independent search subagents one at a time, one per turn, causing high latency. What is the best improvement?", options: ["Merge the 4 subagents into one large subagent that searches all 4 sources in one turn", "Emit 4 Agent (formerly Task) calls in a single response so they run in parallel", "Move the 4 searches to the Message Batches API", "Cut down to the single highest-quality search source"] },
               answer: 1,
               explain: "Các tác vụ độc lập nên được gọi song song trong một lượt. Batch API không phù hợp vì có độ trễ tới 24 giờ.",
             },
             {
               q: "Coordinator không thể tạo subagent nào. Kiểm tra điều gì đầu tiên?",
-              options: ["allowedTools có chứa \"Task\" không", "Model đang dùng có hỗ trợ subagent không", "Biến môi trường ANTHROPIC_LOG đã bật chưa", "System prompt của coordinator có quá dài không"],
-              en: { q: "The coordinator cannot spawn any subagent. What should you check first?", options: ["Whether allowedTools includes \"Task\"", "Whether the current model supports subagents", "Whether the ANTHROPIC_LOG environment variable is set", "Whether the coordinator's system prompt is too long"] },
+              options: ["allowedTools có chứa \"Agent\" (tên cũ \"Task\") không", "Model đang dùng có hỗ trợ subagent không", "Biến môi trường ANTHROPIC_LOG đã bật chưa", "System prompt của coordinator có quá dài không"],
+              en: { q: "The coordinator cannot spawn any subagent. What should you check first?", options: ["Whether allowedTools includes \"Agent\" (formerly \"Task\")", "Whether the current model supports subagents", "Whether the ANTHROPIC_LOG environment variable is set", "Whether the coordinator's system prompt is too long"] },
               answer: 0,
-              explain: "Subagent được gọi qua công cụ Task; thiếu nó trong allowedTools thì coordinator không thể ủy thác.",
+              explain: "Theo đề thi, subagent được gọi qua công cụ Task (nay là Agent); thiếu nó trong allowedTools thì coordinator không thể ủy thác. Trên bản hiện tại, chỉ bỏ nó khỏi tools hoặc thêm vào disallowedTools mới chặn được.",
             },
           ],
         },
@@ -481,7 +483,7 @@ window.COURSE = {
       flashcards: [
         { front: "stop_reason nào báo agent cần chạy công cụ?", back: "\"tool_use\" — chạy công cụ, nối tool_result, gọi lại Claude." },
         { front: "Subagent có thấy lịch sử của coordinator không?", back: "Không. Ngữ cảnh cô lập — coordinator phải truyền tường minh trong prompt." },
-        { front: "Chạy subagent song song bằng cách nào?", back: "Phát nhiều lệnh gọi Task trong cùng một response của coordinator." },
+        { front: "Chạy subagent song song bằng cách nào?", back: "Phát nhiều lệnh gọi Agent (tên cũ: Task) trong cùng một response của coordinator." },
         { front: "Khi nào chọn ép buộc bằng code thay vì prompt?", back: "Khi cần tuân thủ tuyệt đối (tài chính, bảo mật, pháp lý) — prompt chỉ cho xác suất." },
         { front: "PreToolUse vs PostToolUse?", back: "Pre: chặn/chỉnh trước khi công cụ chạy. Post: chuẩn hóa kết quả trước khi model nhận." },
         { front: "fork_session dùng để làm gì?", back: "Tách nhánh từ baseline chung để khám phá nhiều hướng tiếp cận độc lập." },
@@ -791,11 +793,12 @@ window.COURSE = {
   <li>Đặt ở <code>.claude/commands/</code> trong repo: commit vào git, cả nhóm cùng có.</li>
   <li>Đặt ở <code>~/.claude/commands/</code>: chỉ bạn dùng.</li>
 </ul>
+<p>Hiện nay slash command và skill đã gộp làm một: file <code>.claude/commands/deploy.md</code> và skill <code>.claude/skills/deploy/SKILL.md</code> đều tạo ra lệnh <code>/deploy</code>. Nếu trùng tên, skill được ưu tiên.</p>
 <h4>Skill: quy trình đóng gói sẵn</h4>
 <p>Skill nằm trong <code>.claude/skills/&lt;tên&gt;/SKILL.md</code>. Ngoài phần hướng dẫn, đầu file có vài dòng cấu hình (gọi là frontmatter):</p>
 <ul>
   <li><code>context: fork</code>: chạy skill trong một agent con riêng. Những kết quả dài dòng phát sinh khi chạy sẽ không làm đầy cuộc trò chuyện chính; chỉ bản kết quả gọn được trả về.</li>
-  <li><code>allowed-tools</code>: giới hạn những công cụ skill được dùng.</li>
+  <li><code>allowed-tools</code>: những công cụ được cho phép sẵn khi skill chạy, không phải hỏi lại. Đề thi mô tả trường này là “giới hạn công cụ”; thực tế nó không chặn công cụ khác. Muốn giới hạn thật, dùng <code>context: fork</code> với một agent có ít công cụ, ví dụ <code>agent: Explore</code>.</li>
   <li><code>argument-hint</code>: gợi ý người dùng cần nhập tham số gì.</li>
 </ul>
 <h4>Khác nhau giữa skill và CLAUDE.md</h4>
