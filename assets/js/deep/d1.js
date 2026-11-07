@@ -152,7 +152,7 @@ window.DEEP_ADD({
 <section class="adv-block">
   <h4>Khai báo một agent con gồm những gì</h4>
   <p>Mỗi loại agent con được khai báo bằng một <code>AgentDefinition</code> có bốn phần: <code>description</code> là đoạn mô tả để coordinator biết khi nào nên gọi agent này; <code>prompt</code> là hướng dẫn riêng cho agent con; <code>tools</code> là danh sách công cụ nó được dùng; và <code>model</code> là model sẽ chạy nó, có thể chọn model rẻ hơn cho việc đơn giản.</p>
-  <p>Khi giao việc, coordinator gọi công cụ Task với hai thông tin chính: chọn loại agent con nào (<code>subagent_type</code>) và nội dung nhiệm vụ (<code>prompt</code>). Nội dung nhiệm vụ là <b>toàn bộ</b> những gì agent con biết khi bắt đầu làm việc.</p>
+  <p>Khi giao việc, coordinator gọi công cụ Agent (tên cũ: Task) với hai thông tin chính: chọn loại agent con nào (<code>subagent_type</code>) và nội dung nhiệm vụ (<code>prompt</code>). Nội dung nhiệm vụ là <b>toàn bộ</b> những gì agent con biết khi bắt đầu làm việc.</p>
 </section>
 <section class="adv-block">
   <h4>Một mẫu phiếu giao việc rõ ràng</h4>
@@ -184,8 +184,8 @@ Giới hạn: tối đa 8 phát hiện, không tìm thêm nguồn mới.</code><
         title: "Coordinator không bao giờ giao việc",
         scenario: "Đã khai báo đầy đủ hai agent con là search và synth, nhưng coordinator vẫn tự làm mọi thứ và chưa lần nào giao việc.",
         bait: "Viết lại mô tả của agent con cho hấp dẫn hơn.",
-        why: "Coordinator giao việc thông qua công cụ Task. Nếu danh sách <code>allowedTools</code> của nó không có \"Task\", nó không có công cụ nào để giao việc.",
-        fix: ["Thêm \"Task\" vào allowedTools của coordinator.", "Sau đó mới tinh chỉnh mô tả để coordinator chọn đúng agent con."],
+        why: "Coordinator giao việc thông qua công cụ Agent, trong đề thi gọi là Task. Theo đề thi, nếu danh sách <code>allowedTools</code> của nó không có \"Task\", nó không có công cụ nào để giao việc. Trên bản hiện tại, hãy kiểm tra thêm tùy chọn <code>tools</code> và <code>disallowedTools</code>, vì đó mới là nơi quyết định công cụ có tồn tại hay không.",
+        fix: ["Thêm \"Agent\" (đề thi ghi \"Task\") vào allowedTools của coordinator, và kiểm tra nó không bị loại khỏi tools.", "Sau đó mới tinh chỉnh mô tả để coordinator chọn đúng agent con."],
       },
     ],
     quiz: [

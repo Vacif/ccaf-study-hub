@@ -128,7 +128,7 @@ window.DEEP_ADD({
 <section class="adv-block">
   <h4>Đủ bốn giá trị của tool_choice</h4>
   <p>Ngoài <code>auto</code>, <code>any</code> và chỉ định đích danh công cụ, còn có <code>none</code>: cấm gọi công cụ dù danh sách công cụ vẫn được gửi kèm. Giá trị này hữu ích khi một lượt chỉ cần Claude trả lời bằng chữ, mà bạn vẫn muốn giữ nguyên danh sách công cụ để tận dụng phần đã lưu đệm.</p>
-  <p>Hai điều cần nhớ thêm. Khi đặt <code>any</code> hoặc chỉ định đích danh, Claude bắt đầu ngay bằng yêu cầu gọi công cụ, không có câu giải thích nào trước đó. Và nếu bạn bật chế độ suy nghĩ mở rộng (extended thinking), chỉ dùng được <code>auto</code> hoặc <code>none</code>.</p>
+  <p>Hai điều cần nhớ thêm. Khi đặt <code>any</code> hoặc chỉ định đích danh, Claude bắt đầu ngay bằng yêu cầu gọi công cụ, không có câu giải thích nào trước đó. Ép gọi công cụ cũng không đi cùng bước suy nghĩ: tùy model mà API trả lỗi, hoặc nhận yêu cầu nhưng bỏ qua suy nghĩ (như Claude Haiku 5.5). Muốn Claude suy nghĩ trước khi gọi công cụ, dùng <code>auto</code>.</p>
 </section>
 <section class="adv-block">
   <h4>Đổi tool_choice theo từng giai đoạn</h4>
@@ -188,7 +188,7 @@ window.DEEP_ADD({
 </section>
 <section class="adv-block">
   <h4>Biến môi trường trong .mcp.json</h4>
-  <p><code>\${GITHUB_TOKEN}</code> sẽ được thay bằng giá trị của biến môi trường GITHUB_TOKEN trên máy của từng người. Cú pháp <code>\${TÊN:-giá_trị_mặc_định}</code> cho phép dùng giá trị mặc định khi biến chưa được đặt. Nếu thiếu một biến bắt buộc, Claude Code báo lỗi cấu hình; khi đó hãy đặt biến trên máy của mình, đừng sửa file trong repo.</p>
+  <p><code>\${GITHUB_TOKEN}</code> sẽ được thay bằng giá trị của biến môi trường GITHUB_TOKEN trên máy của từng người. Cú pháp <code>\${TÊN:-giá_trị_mặc_định}</code> cho phép dùng giá trị mặc định khi biến chưa được đặt. Nếu biến chưa được đặt và không có giá trị mặc định, cấu hình vẫn được nạp: <code>claude mcp list</code> và <code>/mcp</code> hiện cảnh báo, còn chuỗi <code>\${GITHUB_TOKEN}</code> được giữ nguyên, nên máy chủ sẽ lỗi xác thực khi gọi dịch vụ. Khi đó hãy đặt biến trên máy của mình, đừng sửa file trong repo.</p>
 </section>
 <section class="adv-block">
   <h4>Ba thứ một máy chủ MCP có thể cung cấp</h4>
@@ -216,9 +216,9 @@ window.DEEP_ADD({
     quiz: [
       {
         level: "hard",
-        q: "Thành viên mới clone repo. Claude Code hỏi có tin tưởng máy chủ trong .mcp.json không; sau khi đồng ý, máy chủ GitHub khởi động thất bại vì thiếu biến môi trường. Cách khắc phục đúng là gì?",
+        q: "Thành viên mới clone repo. Claude Code hỏi có tin tưởng máy chủ trong .mcp.json không; sau khi đồng ý, <code>/mcp</code> cảnh báo thiếu biến môi trường và máy chủ GitHub báo lỗi xác thực. Cách khắc phục đúng là gì?",
         options: ["Sửa .mcp.json và dán token của thành viên mới vào đó", "Thành viên mới đặt biến GITHUB_TOKEN trên máy mình rồi khởi động lại", "Chuyển máy chủ sang ~/.claude.json của thành viên mới, ghi thẳng token", "Xóa máy chủ GitHub khỏi .mcp.json để không còn báo lỗi"],
-        en: { q: "A new team member clones the repo. Claude Code asks whether to trust the servers in .mcp.json; after approving, the GitHub server fails to start because an environment variable is missing. What is the correct fix?", options: ["Edit .mcp.json and paste the new member's token into it", "The new member sets GITHUB_TOKEN on their own machine and restarts", "Move the server into the new member's ~/.claude.json with the token written in", "Remove the GitHub server from .mcp.json so the error goes away"] },
+        en: { q: "A new team member clones the repo. Claude Code asks whether to trust the servers in .mcp.json; after approving, /mcp warns about a missing environment variable and the GitHub server reports an authentication error. What is the correct fix?", options: ["Edit .mcp.json and paste the new member's token into it", "The new member sets GITHUB_TOKEN on their own machine and restarts", "Move the server into the new member's ~/.claude.json with the token written in", "Remove the GitHub server from .mcp.json so the error goes away"] },
         answer: 1,
         explain: "Cấu hình chung đã đúng; thứ còn thiếu là giá trị bí mật trên máy cá nhân. Hãy sửa ở môi trường của người đó, không sửa repo.",
         notes: ["Làm lộ khóa bí mật vào git.", "Đúng.", "Lệch cấu hình so với cả nhóm, và vẫn ghi thẳng khóa bí mật.", "Cả nhóm mất luôn công cụ."],
